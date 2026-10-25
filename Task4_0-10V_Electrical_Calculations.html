@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Task 4 – Electrical Calculations for 0–10 V Analog Output Circuit</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --page:#EEF0F4; --paper:#FFFFFF; --soft:#F3F5F9; --ink:#16202F; --muted:#566275; --rule:#CDD3DE;
+    --calc:#0E7F74; --ds:#2B6CB0; --assume:#A86A0C;
+    --warn-bg:#FFF4D6; --warn-ink:#5E4200; --warn-line:#E2B93B;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --sans:"Segoe UI","Helvetica Neue",Arial,system-ui,sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page:#0E131B; --paper:#161D28; --soft:#1C2532; --ink:#E5E9F0; --muted:#9AA6B8; --rule:#2C3647;
+      --calc:#3DC5B4; --ds:#6FAEF0; --assume:#E5A94A;
+      --warn-bg:#3A2F10; --warn-ink:#F3D88F; --warn-line:#8A6E1E;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--page); color:var(--ink); font-family:var(--sans); font-size:16px; line-height:1.55; }
+  .sheet { max-width:900px; margin:0 auto; padding:1.25rem 1rem 3rem; }
+  @media (min-width:720px) { .sheet { padding:2.5rem 2rem 4rem; } }
+
+  .titleblock { background:var(--paper); border:1px solid var(--rule); border-top:6px solid var(--ink); padding:1.5rem 1.25rem 0; }
+  @media (min-width:720px) { .titleblock { padding:2rem 2rem 0; } }
+  .proj { margin:0 0 .35rem; color:var(--muted); font-size:.95rem; }
+  h1 { font-family:var(--serif); font-size:clamp(1.5rem,4.2vw,2.2rem); line-height:1.15; margin:0 0 1.25rem; max-width:28ch; }
+  .meta { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); margin:0 -1.25rem; border-top:1px solid var(--rule); }
+  @media (min-width:720px) { .meta { margin:0 -2rem; } }
+  .meta div { padding:.65rem 1.25rem; border-right:1px solid var(--rule); border-bottom:1px solid var(--rule); }
+  @media (min-width:720px) { .meta div { padding:.65rem 2rem; } }
+  .meta dt { font-size:.8rem; color:var(--muted); }
+  .meta dd { margin:0; font-weight:600; }
+
+  .notice { margin:1.25rem 0 0; padding:.8rem 1.1rem; background:var(--warn-bg); color:var(--warn-ink); border:1px solid var(--warn-line); border-left-width:6px; }
+  .notice p { margin:0; }
+
+  section { background:var(--paper); border:1px solid var(--rule); margin-top:1.25rem; padding:1.5rem 1.25rem; }
+  @media (min-width:720px) { section { padding:1.75rem 2rem; } }
+  h2 { font-family:var(--serif); font-size:1.4rem; margin:0 0 .75rem; line-height:1.2; }
+  p { margin:0 0 .7rem; }
+
+  .eq { margin:.6rem 0 1rem; padding:.7rem 1rem; background:var(--soft); border-left:4px solid var(--calc); font-family:var(--serif); font-size:1.08rem; line-height:1.9; overflow-x:auto; }
+  .eq div { white-space:nowrap; }
+  var { font-style:italic; }
+  .frac { display:inline-flex; flex-direction:column; vertical-align:middle; text-align:center; margin:0 .2em; line-height:1.25; }
+  .frac > span:first-child { border-bottom:1px solid currentColor; padding:0 .25em; }
+  .frac > span:last-child { padding:0 .25em; }
+
+  .t { font-family:var(--sans); font-size:.7rem; font-weight:600; padding:0 .35rem; margin-left:.25rem; border:1px solid currentColor; vertical-align:1px; white-space:nowrap; font-style:normal; }
+  .t.calc { color:var(--calc); } .t.ds { color:var(--ds); } .t.as { color:var(--assume); }
+  .keys { font-size:.88rem; color:var(--muted); margin:.9rem 0 0; }
+
+  .tablewrap { margin-top:.8rem; overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:.92rem; }
+  caption { text-align:left; font-weight:600; padding-bottom:.4rem; }
+  th, td { text-align:left; vertical-align:top; padding:.5rem .7rem; border-bottom:1px solid var(--rule); }
+  thead th { background:var(--soft); border-top:1px solid var(--rule); border-bottom:2px solid var(--ink); font-size:.85rem; white-space:nowrap; }
+  td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  tr.hl td { background:var(--soft); }
+
+  @media (max-width:760px) {
+    table.stack thead { position:absolute; left:-9999px; }
+    table.stack, table.stack tbody, table.stack tr, table.stack td { display:block; width:100%; }
+    table.stack tr { border:1px solid var(--rule); margin-bottom:.7rem; background:var(--soft); }
+    table.stack td { border-bottom:1px solid var(--rule); padding:.45rem .7rem; text-align:left; white-space:normal; }
+    table.stack tr > *:last-child { border-bottom:0; }
+    table.stack td::before { content:attr(data-label); display:block; font-size:.76rem; color:var(--muted); font-weight:600; }
+  }
+  ul { margin:.3rem 0 .6rem; padding-left:1.2rem; }
+  li { margin-bottom:.35rem; }
+  footer { margin-top:1.5rem; font-size:.85rem; color:var(--muted); }
+
+  @media print {
+    :root { --page:#fff; --paper:#fff; --soft:#f4f4f4; --ink:#000; --muted:#444; --rule:#aaa; }
+    .sheet { padding:0; max-width:none; }
+    section, tr { break-inside:avoid; }
+  }
+</style>
+</head>
+<body>
+<main class="sheet">
+
+  <header class="titleblock">
+    <p class="proj">NIDAR 2.0 Hardware Team</p>
+    <h1>Electrical Calculations for 0–10 V Analog Output Circuit</h1>
+    <dl class="meta">
+      <div><dt>Task</dt><dd>Task 4</dd></div>
+      <div><dt>Project</dt><dd>NIDAR 2.0 Hardware Team</dd></div>
+      <div><dt>Status</dt><dd>Draft – theoretical</dd></div>
+      <div><dt>Date</dt><dd>25 October 2026</dd></div>
+    </dl>
+  </header>
+
+  <div class="notice" role="note">
+    <p><b>Theoretical calculations only.</b> No simulation has been run, no hardware has been tested, and no mentor has reviewed this.</p>
+  </div>
+
+  <p class="keys"><span class="t calc">calc</span> worked out below &nbsp; <span class="t ds">datasheet</span> read from a manufacturer page, not fully cross-checked &nbsp; <span class="t as">assumed</span> planning value, not verified</p>
+
+  <!-- 1 -->
+  <section>
+    <h2>1. DAC output range and amplifier gain</h2>
+    <p>The MCP4725 (12-bit) runs from a 5 V rail. Its output goes from 0 V up to the supply voltage.</p>
+    <div class="eq">
+      <div><var>V</var><sub>DAC,max</sub> = 5.000 V × <span class="frac"><span>4095</span><span>4096</span></span> = <b>4.9988 V</b></div>
+      <div>Required gain <var>G</var> = <span class="frac"><span>10 V</span><span>5 V</span></span> = <b>2.000</b></div>
+      <div><var>V</var><sub>OUT,max</sub> = 2.000 × 4.9988 V = <b>9.9976 V</b></div>
+      <div>Output step = 10 V / 4096 = <b>2.441 mV</b></div>
+    </div>
+    <p>The top code is one step (2.44 mV) below 10 V, which is acceptable. <span class="t calc">calc</span></p>
+    <p>The MCP4725 needs a logic high of at least 0.7 × V<sub>DD</sub> = 3.5 V. A 3.3 V Blue Pill is below that, so a level shifter is proposed. <span class="t ds">datasheet</span></p>
+  </section>
+
+  <!-- 2 -->
+  <section>
+    <h2>2. Op-amp supply voltage</h2>
+    <p>The op-amp (OPA197) cannot reach its own rail. The supply must be above the largest output by a safe margin.</p>
+    <div class="eq">
+      <div>Largest output (worst case) = 10 V × 1.01 × 1.001 ≈ <b>10.11 V</b></div>
+      <div>Headroom = <b>0.6 V</b> (conservative)</div>
+      <div>Minimum op-amp rail = 10.11 + 0.6 = <b>10.71 V</b></div>
+      <div>Minimum input at J1 = 10.71 + 0.5 V (diode D1) = <b>11.21 V</b></div>
+    </div>
+    <p><b>Proposed:</b> a regulated 12 V supply, within ±5 %. The OPA197 works from 4.5 V to 36 V, so 12 V is inside its range. If the supply can drop below about 11.2 V (for example a battery), use 15 V instead. <span class="t as">assumed</span> <span class="t ds">datasheet</span></p>
+    <p style="color:var(--muted);font-size:.9rem">Assumes: 5 V rail ±1 %, resistors ±0.1 %, D1 drop 0.5 V, headroom 0.6 V.</p>
+  </section>
+
+  <!-- 3 -->
+  <section>
+    <h2>3. Feedback resistor values</h2>
+    <div class="eq">
+      <div><var>G</var> = 1 + <span class="frac"><span><var>R</var><sub>f</sub></span><span><var>R</var><sub>g</sub></span></span> = 2 &nbsp;⇒&nbsp; <var>R</var><sub>f</sub> = <var>R</var><sub>g</sub></div>
+      <div>Choose <var>R</var><sub>f</sub> = <var>R</var><sub>g</sub> = <b>10 kΩ</b></div>
+      <div>Feedback current = <span class="frac"><span>10 V</span><span>20 kΩ</span></span> = <b>0.5 mA</b></div>
+    </div>
+    <p>10 kΩ keeps the load on the op-amp small (1 kΩ would draw 5 mA) and keeps errors from bias current and noise negligible. <span class="t calc">calc</span></p>
+    <div class="tablewrap">
+      <table>
+        <caption>Resistor tolerance and full-scale error</caption>
+        <thead><tr><th>Tolerance</th><th class="n">Gain error</th><th class="n">Error at 10 V</th></tr></thead>
+        <tbody>
+          <tr><td>1 %</td><td class="n">1.01 %</td><td class="n">101 mV</td></tr>
+          <tr class="hl"><td>0.1 % (proposed)</td><td class="n">0.10 %</td><td class="n">10 mV</td></tr>
+          <tr><td>0.05 %</td><td class="n">0.05 %</td><td class="n">5 mV</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:.8rem">The 5 V rail is the biggest error source: it is the DAC reference, so a 1 % rail error gives a 1 % (100 mV) output error. <span class="t calc">calc</span> <span class="t as">assumed</span></p>
+  </section>
+
+  <!-- 4 -->
+  <section>
+    <h2>4. Output voltage limits and saturation</h2>
+    <p>The output follows the DAC only while it stays inside the op-amp's range. Outside it, the output flattens and the feedback no longer controls it.</p>
+    <div class="eq">
+      <div>Upper limit = op-amp rail − 0.6 V</div>
+      <div>12 V input: rail ≈ 11.5 V → limit ≈ <b>10.9 V</b> (OK for 10 V)</div>
+      <div>10.8 V input (−10 %): rail ≈ 10.3 V → limit ≈ <b>9.7 V</b> (clips above code ≈ 3973)</div>
+    </div>
+    <ul>
+      <li><b>Top end:</b> if the supply is too low, the highest codes all give the same voltage.</li>
+      <li><b>Bottom end:</b> on a single supply the output cannot go below 0 V. It may sit a few millivolts above 0 V at code 0 (TI quotes up to about 25 mV from the rail with no load, for the positive rail).</li>
+      <li><b>Power-up:</b> the MCP4725 factory default is mid-scale (code 2048), so the output would be about 5 V at power-up until firmware writes code 0.</li>
+    </ul>
+    <p><span class="t ds">datasheet</span> <span class="t calc">calc</span> <span class="t as">assumed</span></p>
+  </section>
+
+  <!-- 5 -->
+  <section>
+    <h2>5. Output current and load resistance limits</h2>
+    <p>A 100 Ω series resistor (R3) protects the output. It also lowers the voltage when the load is small.</p>
+    <div class="eq">
+      <div><var>V</var><sub>J2</sub> = 10 V × <span class="frac"><span><var>R</var><sub>L</sub></span><span><var>R</var><sub>L</sub> + 100 Ω</span></span> &nbsp;&nbsp; <var>I</var><sub>L</sub> = <span class="frac"><span>10 V</span><span><var>R</var><sub>L</sub> + 100 Ω</span></span></div>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <caption>Full-scale (10 V) output against load</caption>
+        <thead><tr><th class="n">Load R<sub>L</sub></th><th class="n">Load current</th><th class="n">Voltage at J2</th><th class="n">Error</th></tr></thead>
+        <tbody>
+          <tr><td class="n">100 kΩ</td><td class="n">0.10 mA</td><td class="n">9.990 V</td><td class="n">−0.10 %</td></tr>
+          <tr class="hl"><td class="n">10 kΩ</td><td class="n">0.99 mA</td><td class="n">9.901 V</td><td class="n">−0.99 %</td></tr>
+          <tr><td class="n">2 kΩ</td><td class="n">4.76 mA</td><td class="n">9.524 V</td><td class="n">−4.76 %</td></tr>
+          <tr><td class="n">1 kΩ</td><td class="n">9.09 mA</td><td class="n">9.091 V</td><td class="n">−9.09 %</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul style="margin-top:.8rem">
+      <li><b>Recommended load: 10 kΩ or higher</b> (about 1 mA, error about 1 %).</li>
+      <li>Planning limit: keep op-amp output current under 10 mA, which means a load of about 1 kΩ or more. <span class="t as">assumed</span></li>
+      <li>The OPA197 short-circuit current is about ±65 mA. This is not a continuous rating. <span class="t ds">datasheet</span></li>
+      <li>Shorted output: the op-amp limits at 65 mA, so R3 dissipates about 0.42 W and the op-amp about 0.33 W. R3 should be rated for this (1 W or more). <span class="t calc">calc</span></li>
+    </ul>
+  </section>
+
+  <!-- 6 -->
+  <section>
+    <h2>6. Power calculations and safety</h2>
+    <p>Full scale, 10 kΩ load, 12 V input (about 11.5 V after D1).</p>
+    <div class="tablewrap">
+      <table class="stack">
+        <caption>Power budget</caption>
+        <thead><tr><th>Item</th><th>Calculation</th><th class="n">Result</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Item">Op-amp supply current</td><td data-label="Calculation">11.5 V × 1.3 mA (max)</td><td class="n" data-label="Result">15 mW</td></tr>
+          <tr><td data-label="Item">Feedback resistors</td><td data-label="Calculation">10 V × 0.5 mA</td><td class="n" data-label="Result">5 mW total</td></tr>
+          <tr><td data-label="Item">R3 at 1 mA</td><td data-label="Calculation">(1 mA)² × 100 Ω</td><td class="n" data-label="Result">0.1 mW</td></tr>
+          <tr><td data-label="Item">5 V regulator loss (70 mA assumed)</td><td data-label="Calculation">(11.5 − 5) V × 70 mA</td><td class="n" data-label="Result">0.455 W</td></tr>
+          <tr class="hl"><td data-label="Item"><b>Total input power</b></td><td data-label="Calculation">12 V × 72.8 mA</td><td class="n" data-label="Result"><b>0.87 W</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:.8rem">The 5 V regulator is the main heat source. The 70 mA load is an estimate. <span class="t calc">calc</span> <span class="t as">assumed</span></p>
+    <p><b>Safety points</b></p>
+    <ul>
+      <li><b>R3:</b> choose its power rating for a shorted output (0.42 W), not for normal use.</li>
+      <li><b>TVS diode (SMAJ12CA):</b> 12 V stand-off, 13.3–14.7 V breakdown, 19.9 V maximum clamp. It does not conduct at 10 V. It protects against short transients only, not a continuous overvoltage such as a wiring mistake. <span class="t ds">datasheet</span></li>
+      <li><b>MCP4725 supply:</b> it is a 5 V part. If the 5 V regulator fails, 11.5 V could reach the DAC and the Blue Pill.</li>
+      <li><b>Capacitors:</b> use at least 25 V parts on the 12 V rail. <span class="t as">assumed</span></li>
+    </ul>
+  </section>
+
+  <!-- 7 -->
+  <section>
+    <h2>7. Calculation summary</h2>
+    <div class="tablewrap">
+      <table class="stack">
+        <thead><tr><th>Parameter</th><th>Expression</th><th class="n">Result</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Parameter">DAC full scale (code 4095)</td><td data-label="Expression">5.000 V × 4095/4096</td><td class="n" data-label="Result">4.9988 V</td></tr>
+          <tr><td data-label="Parameter">Required gain</td><td data-label="Expression">10 V / 5 V</td><td class="n" data-label="Result">2.000</td></tr>
+          <tr><td data-label="Parameter">Output at code 4095</td><td data-label="Expression">2 × 4.9988 V</td><td class="n" data-label="Result">9.9976 V</td></tr>
+          <tr><td data-label="Parameter">Output step</td><td data-label="Expression">10 V / 4096</td><td class="n" data-label="Result">2.441 mV</td></tr>
+          <tr><td data-label="Parameter">R<sub>f</sub> = R<sub>g</sub></td><td data-label="Expression">(G − 1) R<sub>g</sub></td><td class="n" data-label="Result">10 kΩ</td></tr>
+          <tr><td data-label="Parameter">Gain error, 0.1 % resistors</td><td data-label="Expression">worst case</td><td class="n" data-label="Result">±10 mV</td></tr>
+          <tr><td data-label="Parameter">Minimum input at J1</td><td data-label="Expression">10.11 + 0.6 + 0.5 V</td><td class="n" data-label="Result">11.2 V</td></tr>
+          <tr><td data-label="Parameter">Upper output limit (11.5 V rail)</td><td data-label="Expression">11.5 V − 0.6 V</td><td class="n" data-label="Result">10.9 V</td></tr>
+          <tr><td data-label="Parameter">Load error at 10 kΩ</td><td data-label="Expression">100 / (10 000 + 100)</td><td class="n" data-label="Result">0.99 %</td></tr>
+          <tr><td data-label="Parameter">Recommended minimum load</td><td data-label="Expression">error ≤ 1 %</td><td class="n" data-label="Result">10 kΩ</td></tr>
+          <tr><td data-label="Parameter">Shorted output, R3 power</td><td data-label="Expression">(65 mA)² × 100 Ω</td><td class="n" data-label="Result">0.42 W</td></tr>
+          <tr><td data-label="Parameter">Total input power</td><td data-label="Expression">12 V × 72.8 mA</td><td class="n" data-label="Result">0.87 W</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>NIDAR 2.0 Hardware Team · Task 4 · Draft theoretical calculations, 25 October 2026.</footer>
+</main>
+</body>
+</html>

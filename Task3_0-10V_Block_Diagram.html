@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Task 3 – 0–10 V Analog Output Circuit Block Diagram and Components</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --page: #EEF0F4;
+    --paper: #FFFFFF;
+    --soft: #F3F5F9;
+    --ink: #16202F;
+    --muted: #566275;
+    --rule: #CDD3DE;
+    --dig: #4452C4;   /* 3.3 V digital / MCU */
+    --ana: #0E7F74;   /* 0-5 V analog */
+    --amp: #2B6CB0;   /* signal conditioning */
+    --prot: #7444A8;  /* protection */
+    --out: #A86A0C;   /* 0-10 V output */
+    --pwr: #BE3340;   /* 12 V power */
+    --warn-bg: #FFF4D6;
+    --warn-ink: #5E4200;
+    --warn-line: #E2B93B;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #0E131B;
+      --paper: #161D28;
+      --soft: #1C2532;
+      --ink: #E5E9F0;
+      --muted: #9AA6B8;
+      --rule: #2C3647;
+      --dig: #8D98FF;
+      --ana: #3DC5B4;
+      --amp: #6FAEF0;
+      --prot: #BC8DEA;
+      --out: #E5A94A;
+      --pwr: #F27D89;
+      --warn-bg: #3A2F10;
+      --warn-ink: #F3D88F;
+      --warn-line: #8A6E1E;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  a { color: inherit; }
+  a:focus-visible, summary:focus-visible { outline: 3px solid var(--amp); outline-offset: 2px; }
+
+  .sheet {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+  }
+  @media (min-width: 720px) { .sheet { padding: 2.5rem 2rem 4rem; } }
+
+  /* ---------- Title block ---------- */
+  .titleblock {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-top: 6px solid var(--ink);
+    padding: 1.5rem 1.25rem 0;
+  }
+  @media (min-width: 720px) { .titleblock { padding: 2rem 2rem 0; } }
+  .titleblock .proj { margin: 0 0 .35rem; color: var(--muted); font-size: .95rem; }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: clamp(1.6rem, 4.2vw, 2.5rem);
+    line-height: 1.15;
+    margin: 0 0 1.25rem;
+    letter-spacing: -.01em;
+    max-width: 26ch;
+  }
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    margin: 0 -1.25rem;
+    border-top: 1px solid var(--rule);
+  }
+  @media (min-width: 720px) { .meta { margin: 0 -2rem; } }
+  .meta div { padding: .7rem 1.25rem; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  @media (min-width: 720px) { .meta div { padding: .7rem 2rem; } }
+  .meta dt { font-size: .8rem; color: var(--muted); }
+  .meta dd { margin: 0; font-weight: 600; }
+
+  .notice {
+    margin: 1.25rem 0 0;
+    padding: .9rem 1.1rem;
+    background: var(--warn-bg);
+    color: var(--warn-ink);
+    border: 1px solid var(--warn-line);
+    border-left-width: 6px;
+  }
+  .notice strong { display: block; margin-bottom: .15rem; }
+  .notice p { margin: 0; }
+
+  /* ---------- Sections ---------- */
+  section {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    margin-top: 1.25rem;
+    padding: 1.5rem 1.25rem;
+  }
+  @media (min-width: 720px) { section { padding: 2rem; } }
+  h2 {
+    font-family: var(--serif);
+    font-size: 1.5rem;
+    margin: 0 0 .35rem;
+    line-height: 1.2;
+  }
+  h3 { font-size: 1.05rem; margin: 0; line-height: 1.25; }
+  .lede { color: var(--muted); margin: 0 0 1.25rem; max-width: 70ch; }
+  p { margin: 0 0 .75rem; }
+  code, .mono { font-family: var(--mono); font-size: .88em; }
+
+  /* ---------- Block diagram ---------- */
+  .flow { display: flex; align-items: stretch; margin: 1.5rem 0 1rem; }
+  .block {
+    flex: 1 1 0;
+    min-width: 0;
+    background: var(--soft);
+    border: 1px solid var(--rule);
+    border-top: 5px solid var(--c);
+    padding: .85rem .8rem 1rem;
+  }
+  .block h3 { color: var(--c); margin-bottom: .2rem; }
+  .block .part { font-size: .86rem; font-weight: 600; margin: 0 0 .5rem; overflow-wrap: anywhere; }
+  .block dl { margin: 0; font-size: .84rem; line-height: 1.4; }
+  .block dt { color: var(--muted); font-size: .78rem; margin-top: .45rem; }
+  .block dd { margin: 0; overflow-wrap: anywhere; }
+
+  .conn {
+    flex: 0 0 104px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 .3rem;
+    color: var(--muted);
+    text-align: center;
+  }
+  .conn .lbl { font-size: .76rem; line-height: 1.25; margin-bottom: .35rem; }
+  .conn .lbl b { display: block; color: var(--ink); font-family: var(--mono); font-size: .8rem; }
+  .conn .line { position: relative; width: 100%; height: 2px; background: var(--ink); }
+  .conn .line::after {
+    content: "";
+    position: absolute;
+    right: -1px; top: -5px;
+    border-left: 9px solid var(--ink);
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+  }
+  .conn .tag {
+    margin-top: .4rem;
+    font-size: .7rem;
+    padding: .1rem .4rem;
+    border: 1px dashed var(--muted);
+  }
+
+  @media (max-width: 1040px) {
+    .flow { flex-direction: column; }
+    .conn {
+      flex: 0 0 auto;
+      flex-direction: row;
+      justify-content: flex-start;
+      padding: .6rem 0 .6rem 1.2rem;
+      gap: .9rem;
+      text-align: left;
+    }
+    .conn .lbl { margin: 0; order: 2; }
+    .conn .tag { order: 3; margin: 0; }
+    .conn .line { order: 1; width: 2px; height: 44px; flex: 0 0 auto; }
+    .conn .line::after {
+      right: auto; left: -5px; top: auto; bottom: -1px;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 9px solid var(--ink);
+      border-bottom: 0;
+    }
+  }
+
+  .legend { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; font-size: .85rem; color: var(--muted); margin: 0; padding: 0; list-style: none; }
+  .legend li::before { content: ""; display: inline-block; width: .8rem; height: .8rem; margin-right: .4rem; background: var(--c); vertical-align: -1px; }
+  figcaption { font-size: .88rem; color: var(--muted); margin-top: .75rem; }
+  figure { margin: 0; }
+
+  /* ---------- Function cards ---------- */
+  .funcs { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin-top: 1rem; }
+  .func { border-left: 4px solid var(--c); padding: .1rem 0 .1rem .9rem; }
+  .func h3 { margin-bottom: .25rem; }
+  .func p { margin: 0 0 .4rem; font-size: .95rem; }
+
+  /* ---------- Power tree ---------- */
+  .rail { border: 1px solid var(--rule); border-left: 6px solid var(--c); background: var(--soft); padding: .7rem .9rem; }
+  .rail h3 { color: var(--c); font-size: 1rem; }
+  .rail .src { font-size: .88rem; color: var(--muted); margin: .1rem 0 .5rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: .45rem; margin: 0; padding: 0; list-style: none; }
+  .chips li { background: var(--paper); border: 1px solid var(--rule); padding: .25rem .6rem; font-size: .88rem; }
+  .step {
+    display: flex; align-items: center; gap: .75rem;
+    padding: .3rem 0 .3rem 1.2rem;
+    font-size: .88rem; color: var(--muted);
+  }
+  .step::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 12px; height: 38px;
+    background: var(--ink);
+    clip-path: polygon(40% 0, 60% 0, 60% 70%, 100% 70%, 50% 100%, 0 70%, 40% 70%);
+  }
+
+  /* ---------- Tables ---------- */
+  .tablewrap { margin-top: 1rem; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  th, td { text-align: left; vertical-align: top; padding: .6rem .7rem; border-bottom: 1px solid var(--rule); }
+  thead th { background: var(--soft); border-top: 1px solid var(--rule); border-bottom: 2px solid var(--ink); font-size: .85rem; white-space: nowrap; }
+  tbody th { font-weight: 600; font-family: var(--mono); font-size: .85rem; white-space: nowrap; }
+  td ul { margin: 0; padding-left: 1.1rem; }
+  td li { margin-bottom: .15rem; }
+
+  .st {
+    display: inline-block;
+    padding: .1rem .5rem;
+    font-size: .78rem;
+    font-weight: 600;
+    background: var(--warn-bg);
+    color: var(--warn-ink);
+    border: 1px solid var(--warn-line);
+    white-space: nowrap;
+  }
+  .st.no { background: transparent; color: var(--muted); border-color: var(--muted); font-weight: 500; }
+  .t { font-size: .7rem; font-weight: 600; padding: 0 .3rem; margin-left: .2rem; border: 1px solid var(--muted); color: var(--muted); vertical-align: 1px; }
+  .t.calc { border-color: var(--ana); color: var(--ana); }
+  .t.tbd { border-color: var(--pwr); color: var(--pwr); }
+
+  .keys { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; font-size: .88rem; color: var(--muted); margin: .9rem 0 0; }
+
+  @media (max-width: 760px) {
+    table.stack thead { position: absolute; left: -9999px; }
+    table.stack, table.stack tbody, table.stack tr, table.stack th, table.stack td { display: block; width: 100%; }
+    table.stack tr { border: 1px solid var(--rule); margin-bottom: .8rem; background: var(--soft); }
+    table.stack th, table.stack td { border-bottom: 1px solid var(--rule); padding: .5rem .7rem; }
+    table.stack tr > *:last-child { border-bottom: 0; }
+    table.stack td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: .76rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    table.stack tbody th { background: var(--paper); font-size: .95rem; }
+  }
+
+  .two { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  ol.plain, ul.plain { margin: .5rem 0 0; padding-left: 1.2rem; }
+  ol.plain li, ul.plain li { margin-bottom: .45rem; }
+
+  footer { margin-top: 1.5rem; font-size: .85rem; color: var(--muted); }
+
+  @media print {
+    :root { --page:#fff; --paper:#fff; --soft:#f4f4f4; --ink:#000; --muted:#444; --rule:#aaa; --warn-bg:#fff6dd; --warn-ink:#000; }
+    body { font-size: 11pt; }
+    .sheet { padding: 0; max-width: none; }
+    section, .titleblock { break-inside: avoid-page; }
+    tr, .block, .func { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<main class="sheet">
+
+  <header class="titleblock">
+    <p class="proj">NIDAR 2.0 Hardware Team</p>
+    <h1>0–10 V Analog Output Circuit Block Diagram and Components</h1>
+    <dl class="meta">
+      <div><dt>Task</dt><dd>Task 3</dd></div>
+      <div><dt>Project</dt><dd>NIDAR 2.0 Hardware Team</dd></div>
+      <div><dt>Document status</dt><dd>Draft – design proposal</dd></div>
+      <div><dt>Date</dt><dd>25 October 2026</dd></div>
+    </dl>
+  </header>
+
+  <div class="notice" role="note">
+    <strong>Proposed design. Not verified.</strong>
+    <p>No simulation has been run and no hardware has been built or tested. Every part number and specification below is a proposal. Specifications have not yet been checked against manufacturer datasheets. Values marked <span class="t calc">calc</span> come from the circuit equations in this report. Values marked <span class="t tbd">TBD</span> are undecided.</p>
+  </div>
+
+  <!-- 1 -->
+  <section id="block-diagram" aria-labelledby="h-block">
+    <h2 id="h-block">1. Block diagram</h2>
+    <p class="lede">The Blue Pill sends a 12-bit code over I2C. An external DAC turns it into 0–5 V. An op-amp doubles it to 0–10 V. A protection stage sits between the op-amp and the output connector.</p>
+
+    <figure>
+      <div class="flow" role="img" aria-label="Signal flow: STM32 Blue Pill, to external DAC, to op-amp signal conditioning, to output protection, to 0 to 10 volt output.">
+        <div class="block" style="--c: var(--dig)">
+          <h3>STM32 Blue Pill</h3>
+          <p class="part">STM32F103C8T6 board</p>
+          <dl>
+            <dt>In</dt><dd>5 V (5V pin), SWD</dd>
+            <dt>Out</dt><dd>I2C1: <code>PB6</code> SCL, <code>PB7</code> SDA (3.3 V logic)</dd>
+          </dl>
+        </div>
+
+        <div class="conn">
+          <div class="lbl"><b>I2C</b>12-bit code</div>
+          <div class="line"></div>
+          <div class="tag">3.3 V ↔ 5 V level shifter</div>
+        </div>
+
+        <div class="block" style="--c: var(--ana)">
+          <h3>External DAC</h3>
+          <p class="part">MCP4725 (12-bit, I2C)</p>
+          <dl>
+            <dt>In</dt><dd>I2C, 5 V supply</dd>
+            <dt>Out</dt><dd>0 to 5 V (reference = supply)</dd>
+          </dl>
+        </div>
+
+        <div class="conn">
+          <div class="lbl"><b>0–5 V</b>analog</div>
+          <div class="line"></div>
+        </div>
+
+        <div class="block" style="--c: var(--amp)">
+          <h3>Op-amp conditioning</h3>
+          <p class="part">OPA197, gain of 2</p>
+          <dl>
+            <dt>In</dt><dd>0–5 V, 12 V supply</dd>
+            <dt>Out</dt><dd>0–10 V, low impedance</dd>
+          </dl>
+        </div>
+
+        <div class="conn">
+          <div class="lbl"><b>0–10 V</b>buffered</div>
+          <div class="line"></div>
+        </div>
+
+        <div class="block" style="--c: var(--prot)">
+          <h3>Output protection</h3>
+          <p class="part">Series R, TVS, small RC</p>
+          <dl>
+            <dt>In</dt><dd>0–10 V from op-amp</dd>
+            <dt>Out</dt><dd>0–10 V, current limited, clamped</dd>
+          </dl>
+        </div>
+
+        <div class="conn">
+          <div class="lbl"><b>0–10 V</b>protected</div>
+          <div class="line"></div>
+        </div>
+
+        <div class="block" style="--c: var(--out)">
+          <h3>0–10 V output</h3>
+          <p class="part">Connector J2</p>
+          <dl>
+            <dt>In</dt><dd>Protected signal</dd>
+            <dt>Out</dt><dd>VOUT and GND to the load</dd>
+          </dl>
+        </div>
+      </div>
+      <ul class="legend" aria-label="Colour key">
+        <li style="--c: var(--dig)">MCU, 3.3 V logic</li>
+        <li style="--c: var(--ana)">DAC, 0–5 V</li>
+        <li style="--c: var(--amp)">Op-amp, 12 V</li>
+        <li style="--c: var(--prot)">Protection</li>
+        <li style="--c: var(--out)">Output, 0–10 V</li>
+        <li style="--c: var(--pwr)">12 V power</li>
+      </ul>
+      <figcaption>Figure 1. Signal chain. All blocks and parts are proposed and not yet verified.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 2 -->
+  <section id="functions" aria-labelledby="h-func">
+    <h2 id="h-func">2. Function of each block</h2>
+    <div class="funcs">
+      <div class="func" style="--c: var(--dig)">
+        <h3>STM32 Blue Pill</h3>
+        <p>Holds the setpoint and sends the DAC code over I2C. The STM32F103C8 has no on-chip DAC, so an external one is needed.</p>
+        <p>Its I/O is 3.3 V. The I2C pins used (<code>PB6</code>, <code>PB7</code>) are 5 V-tolerant, but the DAC input threshold needs checking (see section 7).</p>
+      </div>
+      <div class="func" style="--c: var(--ana)">
+        <h3>External DAC</h3>
+        <p>Converts the 12-bit code to a voltage from 0 V up to its supply voltage. Powered from a 5 V rail, full scale is about 5 V.</p>
+        <p>The supply is also the reference, so any error on the 5 V rail appears directly in the output.</p>
+      </div>
+      <div class="func" style="--c: var(--amp)">
+        <h3>Op-amp conditioning</h3>
+        <p>A non-inverting amplifier with gain 1 + R1/R2 = 2 scales 0–5 V to 0–10 V. It also gives a low-impedance output, so the DAC is not loaded.</p>
+        <p>It runs from 12 V so its output can swing above 10 V with some headroom.</p>
+      </div>
+      <div class="func" style="--c: var(--prot)">
+        <h3>Output protection</h3>
+        <p>A series resistor isolates the op-amp from cable capacitance and limits fault current. A bidirectional TVS clamps ESD and voltage spikes. An optional small capacitor filters noise.</p>
+        <p>The series resistor causes a small load-dependent error (section 6).</p>
+      </div>
+      <div class="func" style="--c: var(--out)">
+        <h3>0–10 V output</h3>
+        <p>A screw terminal (J2) carrying VOUT and signal ground to the receiving device. The load should share the same ground.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="signal-power" aria-labelledby="h-sig">
+    <h2 id="h-sig">3. Signal flow and power supply connections</h2>
+    <p class="lede">Figure 2 shows how power moves through the board. Table 1 lists each signal connection.</p>
+
+    <figure>
+      <div class="rail" style="--c: var(--pwr)">
+        <h3>+12 V rail</h3>
+        <p class="src">Source: J1 input, through reverse-polarity diode D1. Source type is TBD.</p>
+        <ul class="chips">
+          <li>5 V regulator U5 input</li>
+          <li>Op-amp U4 V+ pin (100 nF + 10 µF)</li>
+        </ul>
+      </div>
+      <div class="step">5 V regulator U5</div>
+      <div class="rail" style="--c: var(--ana)">
+        <h3>+5 V rail</h3>
+        <p class="src">Source: U5. Target accuracy ±1 % or better, because the DAC uses this rail as its reference.</p>
+        <ul class="chips">
+          <li>Blue Pill 5V pin</li>
+          <li>MCP4725 VDD (100 nF + 10 µF)</li>
+          <li>Level shifter, 5 V side</li>
+        </ul>
+      </div>
+      <div class="step">Blue Pill onboard 3.3 V regulator</div>
+      <div class="rail" style="--c: var(--dig)">
+        <h3>+3.3 V rail</h3>
+        <p class="src">Source: Blue Pill 3V3 pin. Keep external load small.</p>
+        <ul class="chips">
+          <li>STM32F103 core and I/O</li>
+          <li>Level shifter, 3.3 V side</li>
+        </ul>
+      </div>
+      <div class="rail" style="--c: var(--ink); margin-top: .75rem">
+        <h3 style="color: var(--ink)">GND</h3>
+        <p class="src">One common ground. Join all grounds at the J1 GND terminal. Route the DAC, op-amp and J2 return together, away from digital return currents.</p>
+      </div>
+      <figcaption>Figure 2. Power distribution. Arrows show the direction of power flow.</figcaption>
+    </figure>
+
+    <div class="tablewrap">
+      <table class="stack">
+        <caption style="text-align:left; font-weight:600; padding-bottom:.4rem">Table 1. Signal connections</caption>
+        <thead><tr><th>Net</th><th>From</th><th>To</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><th>I2C_SCL</th><td data-label="From">Blue Pill <code>PB6</code> (I2C1_SCL)</td><td data-label="To">Level shifter, then MCP4725 SCL</td><td data-label="Notes">Pull-ups on both sides of the shifter. Values TBD (most modules include them).</td></tr>
+          <tr><th>I2C_SDA</th><td data-label="From">Blue Pill <code>PB7</code> (I2C1_SDA)</td><td data-label="To">Level shifter, then MCP4725 SDA</td><td data-label="Notes">Same as SCL. I2C address is set by the MCP4725 address pin or variant: TBD.</td></tr>
+          <tr><th>DAC_OUT</th><td data-label="From">MCP4725 VOUT</td><td data-label="To">U4 non-inverting input (+)</td><td data-label="Notes">0–5 V. Test point TP5.</td></tr>
+          <tr><th>AMP_OUT</th><td data-label="From">U4 output</td><td data-label="To">R3, and R1 (feedback)</td><td data-label="Notes">0–10 V. Test point TP6.</td></tr>
+          <tr><th>FB</th><td data-label="From">R1 (10 kΩ) from U4 output</td><td data-label="To">U4 inverting input (−), with R2 (10 kΩ) to GND</td><td data-label="Notes">Sets gain to 2.</td></tr>
+          <tr><th>VOUT</th><td data-label="From">R3 (100 Ω)</td><td data-label="To">J2 pin 1</td><td data-label="Notes">TVS D2 and optional C7 to GND at this node. Test point TP7.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="components" aria-labelledby="h-comp">
+    <h2 id="h-comp">4. Component list</h2>
+    <p class="lede">All components are proposed. Specifications are expected values and have not been checked against datasheets.</p>
+
+    <div class="tablewrap">
+      <table class="stack">
+        <caption style="text-align:left; font-weight:600; padding-bottom:.4rem">Table 2. Proposed components</caption>
+        <thead><tr><th>Ref</th><th>Component</th><th>Purpose</th><th>Key specifications</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr>
+            <th>U1</th>
+            <td data-label="Component">STM32 Blue Pill<br>(STM32F103C8T6)</td>
+            <td data-label="Purpose">Sends DAC codes, runs control firmware.</td>
+            <td data-label="Key specifications"><ul><li>Arm Cortex-M3, up to 72 MHz</li><li>3.3 V I/O, no on-chip DAC</li><li>I2C1 on PB6/PB7</li><li>Clone boards vary; check yours</li></ul></td>
+            <td data-label="Status"><span class="st">Proposed, not verified</span></td>
+          </tr>
+          <tr>
+            <th>U2</th>
+            <td data-label="Component">MCP4725<br>12-bit I2C DAC</td>
+            <td data-label="Purpose">Converts the code to 0–5 V.</td>
+            <td data-label="Key specifications"><ul><li>12-bit, I2C, buffered output</li><li>Supply 2.7–5.5 V; reference = supply</li><li>Output 0 V to VDD</li><li>1 LSB ≈ 1.22 mV at 5 V <span class="t calc">calc</span></li><li>On-chip EEPROM for power-up value</li></ul></td>
+            <td data-label="Status"><span class="st">Proposed, not verified</span></td>
+          </tr>
+          <tr>
+            <th>U3</th>
+            <td data-label="Component">Bidirectional I2C level shifter<br>(BSS138-type, 2 channels minimum)</td>
+            <td data-label="Purpose">Connects 3.3 V Blue Pill I2C to the 5 V DAC.</td>
+            <td data-label="Key specifications"><ul><li>3.3 V side and 5 V side supplies</li><li>Pull-ups usually on the module; value TBD</li><li>Needed because 0.7 × 5 V = 3.5 V is above a 3.3 V logic high <span class="t calc">calc</span></li></ul></td>
+            <td data-label="Status"><span class="st">Proposed, not verified</span></td>
+          </tr>
+          <tr>
+            <th>U4</th>
+            <td data-label="Component">OPA197<br>precision op-amp<br>(or equivalent)</td>
+            <td data-label="Purpose">Gain of 2 and output buffer.</td>
+            <td data-label="Key specifications"><ul><li>Single supply, about 4.5–36 V</li><li>Rail-to-rail input and output</li><li>Low offset voltage</li><li>Run at 12 V; output must reach 10 V with headroom</li></ul></td>
+            <td data-label="Status"><span class="st">Proposed, not verified</span></td>
+          </tr>
+          <tr>
+            <th>R1, R2</th>
+            <td data-label="Component">10 kΩ resistors, 0.1 %, low temperature coefficient</td>
+            <td data-label="Purpose">Set the op-amp gain.</td>
+            <td data-label="Key specifications"><ul><li>Gain = 1 + R1/R2 = 2.000 <span class="t calc">calc</span></li><li>Worst-case gain error from tolerance about ±0.1 % <span class="t calc">calc</span></li><li>Temperature coefficient: TBD <span class="t tbd">TBD</span></li></ul></td>
+            <td data-label="Status"><span class="st">Proposed, not verified</span></td>
+          </tr>
+          <tr>
+            <th>R3</th>
+            <td data-label="Component">100 Ω series resistor, 1 %</td>
+            <td data-label="Purpose">Isolates op-amp from cable capacitance; limits fault current.</td>
+            <td data-label="Key specifications"><ul><li>Load error about 1 % into 10 kΩ <span class="t calc">calc</span></li><li>10 V / 100 Ω = 100 mA before op-amp limit <span class="t calc">calc</span></li><li>Power rating: TBD <span class="t tbd">TBD</span></li></ul></td>
+            <td data-label="Status"><span class="st">Proposed, not verified</span></td>
+          </tr>
+          <tr>
+            <th>C7</th>
+            <td data-label="Component">Output capacitor, C0G or film, 10–100 nF (optional)</td>
+            <td data-label="Purpose">Noise filter with R3.</td>
+            <td data-label="Key specifications"><ul><li>100 Ω with 100 nF gives a corner near 16 kHz <span class="t calc">calc</span></li><li>Final value depends on load and stability: <span class="t tbd">TBD</span></li></ul></td>
+            <td data-label="Status"><span class="st">Proposed, not verified</span></td>
+          </tr>
+          <tr>
+            <th>D2</th>
+            <td data-label="Component">Bidirectional TVS, SMAJ12CA-class</td>
+            <td data-label="Purpose">Clamps ESD and spikes on the output.</td>
+            <td data-label="Key specifications"><ul><li>Standoff voltage 12 V, above the 10 V full scale</li><li>Clamp voltage must stay below the op-amp and load limits: check</li></ul></td>
+            <td data-label="Status"><span class="st">Proposed, not verified</span></td>
+          </tr>
+          <tr>
+            <th>U5</th>
+            <td data-label="Component">5 V regulator<br>(part TBD)</td>
+            <td data-label="Purpose">Makes the 5 V rail for the Blue Pill, DAC and level shifter.</td>
+            <td data-label="Key specifications"><ul><li>Initial accuracy ±1 % or better (target)</li><li>Rail current: TBD, expected tens of mA <span class="t tbd">TBD</span></li><li>Linear loss = (12 V − 5 V) × I; 0.49 W at 70 mA <span class="t calc">calc</span>. Check heat, or use a buck stage.</li></ul></td>
+            <td data-label="Status"><span class="st">Proposed, not verified</span></td>
+          </tr>
+          <tr>
+            <th>D1</th>
+            <td data-label="Component">Schottky diode, SS34-class</td>
+            <td data-label="Purpose">Reverse-polarity protection on the 12 V input.</td>
+            <td data-label="Key specifications"><ul><li>About 40 V, 3 A class</li><li>Forward drop reduces the op-amp rail below 12 V</li></ul></td>
+            <td data-label="Status"><span class="st">Proposed, not verified</span></td>
+          </tr>
+          <tr>
+            <th>C1–C6</th>
+            <td data-label="Component">100 nF ceramic and 10 µF capacitors</td>
+            <td data-label="Purpose">Decoupling at 12 V input, U4, U2, and U5 input/output.</td>
+            <td data-label="Key specifications"><ul><li>Ceramic types rated at least 25 V on the 12 V rail</li><li>Regulator capacitor values follow its datasheet: TBD</li></ul></td>
+            <td data-label="Status"><span class="st">Proposed, not verified</span></td>
+          </tr>
+          <tr>
+            <th>J1–J3, TP1–TP9</th>
+            <td data-label="Component">Connectors and test points</td>
+            <td data-label="Purpose">Power in, output, programming, measurement.</td>
+            <td data-label="Key specifications">See section 5.</td>
+            <td data-label="Status"><span class="st">Proposed, not verified</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="keys"><span><span class="t calc">calc</span> derived from the circuit equations</span><span><span class="t tbd">TBD</span> not decided yet</span><span>Untagged values: expected from the part family, not checked against a datasheet</span></p>
+  </section>
+
+  <!-- 5 -->
+  <section id="connectors" aria-labelledby="h-conn">
+    <h2 id="h-conn">5. Connectors and measurement points</h2>
+
+    <div class="tablewrap">
+      <table class="stack">
+        <caption style="text-align:left; font-weight:600; padding-bottom:.4rem">Table 3. Connectors (proposed)</caption>
+        <thead><tr><th>Ref</th><th>Connector</th><th>Pins</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><th>J1</th><td data-label="Connector">2-pin screw terminal, 5.08 mm</td><td data-label="Pins">1: +12 V<br>2: GND</td><td data-label="Notes">Power input. Fuse or PTC: <span class="t tbd">TBD</span>. Mark polarity on the board.</td></tr>
+          <tr><th>J2</th><td data-label="Connector">2-pin screw terminal, 5.08 mm</td><td data-label="Pins">1: VOUT (0–10 V)<br>2: GND</td><td data-label="Notes">Output to the receiving device. Connect its input ground to pin 2.</td></tr>
+          <tr><th>J3</th><td data-label="Connector">4-pin SWD header on the Blue Pill</td><td data-label="Pins">3V3, SWCLK, SWDIO, GND</td><td data-label="Notes">Programming and debug. Pin order varies; follow the board silkscreen.</td></tr>
+          <tr><th>USB</th><td data-label="Connector">Blue Pill micro-USB (onboard)</td><td data-label="Pins">5 V, D+, D−</td><td data-label="Notes">On many boards USB 5 V is tied to the 5V pin. Do not connect USB and the 5 V rail together without isolation. Check your board.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tablewrap">
+      <table class="stack">
+        <caption style="text-align:left; font-weight:600; padding-bottom:.4rem">Table 4. Measurement points (proposed)</caption>
+        <thead><tr><th>Point</th><th>Net</th><th>Expected value</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><th>TP1</th><td data-label="Net">+12 V after D1</td><td data-label="Expected value">12 V minus D1 drop</td><td data-label="Use">Check input and op-amp headroom.</td></tr>
+          <tr><th>TP2</th><td data-label="Net">+5 V</td><td data-label="Expected value">5.00 V (target ±1 %)</td><td data-label="Use">Measure first. It sets the DAC full scale.</td></tr>
+          <tr><th>TP3</th><td data-label="Net">+3.3 V</td><td data-label="Expected value">3.3 V nominal</td><td data-label="Use">Check the Blue Pill regulator.</td></tr>
+          <tr><th>TP4</th><td data-label="Net">GND</td><td data-label="Expected value">0 V</td><td data-label="Use">Meter and scope reference. Add a second one near J2.</td></tr>
+          <tr><th>TP5</th><td data-label="Net">DAC_OUT</td><td data-label="Expected value">0–5 V</td><td data-label="Use">Check the DAC alone, before the op-amp.</td></tr>
+          <tr><th>TP6</th><td data-label="Net">AMP_OUT</td><td data-label="Expected value">2 × TP5</td><td data-label="Use">Check gain and offset.</td></tr>
+          <tr><th>TP7</th><td data-label="Net">VOUT at J2</td><td data-label="Expected value">TP6 minus R3 drop</td><td data-label="Use">Final output, with and without load.</td></tr>
+          <tr><th>TP8, TP9</th><td data-label="Net">I2C_SCL, I2C_SDA (DAC side)</td><td data-label="Expected value">Logic swing to about 5 V</td><td data-label="Use">Scope the bus if the DAC does not respond.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="calcs" aria-labelledby="h-calc">
+    <h2 id="h-calc">6. Expected transfer function</h2>
+    <p class="lede">These are design calculations only, assuming an ideal 5.000 V rail and ideal parts. They are not measurements.</p>
+    <p><code>VOUT = 10 V × code / 4096</code> &nbsp;<span class="t calc">calc</span>. Output step: 2.441 mV <span class="t calc">calc</span>. Rail error maps 1:1 to output error, so a 1 % low 5 V rail gives about 0.1 V low at full scale <span class="t calc">calc</span>.</p>
+
+    <div class="tablewrap">
+      <table>
+        <caption style="text-align:left; font-weight:600; padding-bottom:.4rem">Table 5. Code to voltage</caption>
+        <thead><tr><th>DAC code</th><th>DAC output</th><th>Output at J2 (no load)</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>0 V</td><td>0 V</td></tr>
+          <tr><td>1024</td><td>1.250 V</td><td>2.500 V</td></tr>
+          <tr><td>2048</td><td>2.500 V</td><td>5.000 V</td></tr>
+          <tr><td>3072</td><td>3.750 V</td><td>7.500 V</td></tr>
+          <tr><td>4095</td><td>4.9988 V</td><td>9.9976 V</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:.9rem">Load error from R3: <code>VOUT_load = VOUT × RL / (RL + 100 Ω)</code> <span class="t calc">calc</span>. That is about 1 % low into 10 kΩ and about 0.1 % low into 100 kΩ. The load impedance of the receiving device is <span class="t tbd">TBD</span>.</p>
+  </section>
+
+  <!-- 7 -->
+  <section id="open" aria-labelledby="h-open">
+    <h2 id="h-open">7. Open items and verification status</h2>
+    <div class="two">
+      <div>
+        <h3>Open design questions</h3>
+        <ol class="plain">
+          <li><b>I2C logic levels.</b> A 5 V MCP4725 may need a logic high near 3.5 V. A level shifter is proposed. Confirm the threshold in the datasheet.</li>
+          <li><b>Power-up output.</b> Confirm what the DAC outputs at power-up. If it restores a non-zero EEPROM value, the output could be non-zero before firmware runs. Store code 0 in EEPROM, or check the part's default.</li>
+          <li><b>12 V source.</b> The source and its minimum voltage are not decided. For a 10 V output, the op-amp rail (after D1) must stay above 10 V plus the op-amp's output headroom. A battery that sags below about 11 V may not be enough.</li>
+          <li><b>Zero end of the range.</b> On a single supply, the op-amp output may not reach exactly 0 V. Check the datasheet and decide if a small offset is acceptable.</li>
+          <li><b>Load impedance.</b> Confirm the input impedance of the receiving device, then set R3 and C7.</li>
+          <li><b>Short-circuit behaviour.</b> Check how long the op-amp can survive a shorted output.</li>
+          <li><b>Resolution and accuracy.</b> 12 bits gives a 2.44 mV step. If this is not enough, a higher-resolution DAC with an external reference is an alternative.</li>
+          <li><b>5 V regulator.</b> Choose a part; check heat dissipation from 12 V.</li>
+        </ol>
+      </div>
+      <div>
+        <h3>Verification status</h3>
+        <div class="tablewrap" style="margin-top:.5rem">
+          <table>
+            <thead><tr><th>Step</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Datasheet check of each part</td><td><span class="st no">Not done</span></td></tr>
+              <tr><td>Circuit simulation</td><td><span class="st no">Not done</span></td></tr>
+              <tr><td>Hardware build</td><td><span class="st no">Not done</span></td></tr>
+              <tr><td>Code sweep (linearity, offset, full scale)</td><td><span class="st no">Not done</span></td></tr>
+              <tr><td>Load test and short-circuit test</td><td><span class="st no">Not done</span></td></tr>
+              <tr><td>Power-up and reset behaviour</td><td><span class="st no">Not done</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    NIDAR 2.0 Hardware Team · Task 3 · Draft design proposal, 25 October 2026. Not verified by simulation or hardware test.
+  </footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Researching an MCU-Controlled 0–10 V Analog Output Circuit | NIDAR 2.0 Hardware Team</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --canvas: #EDF1F4;
+    --paper: #FFFFFF;
+    --ink: #122130;
+    --steel: #4C5F70;
+    --rule: #CCD6DE;
+    --tint: #F4F7F9;
+    --signal: #0A62B0;
+    --signal-ink: #FFFFFF;
+    --signal-soft: #E4F0FA;
+    --note-bg: #FFF6DC;
+    --note-ink: #5C4100;
+    --note-rule: #E3C56B;
+
+    --sans: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+    color-scheme: light dark;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --canvas: #0E151C;
+      --paper: #16202A;
+      --ink: #E6EDF3;
+      --steel: #9DB0C0;
+      --rule: #2C3B49;
+      --tint: #1B2733;
+      --signal: #6DB3F2;
+      --signal-ink: #0B1822;
+      --signal-soft: #1A2E41;
+      --note-bg: #2B2412;
+      --note-ink: #F0DCA0;
+      --note-rule: #6B5A25;
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; scroll-padding-top: 1.25rem; }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 1.0625rem;
+    line-height: 1.7;
+  }
+
+  a { color: var(--signal); text-underline-offset: 0.18em; }
+  a:focus-visible, summary:focus-visible, .scroll:focus-visible {
+    outline: 3px solid var(--signal);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  .skip {
+    position: absolute; left: 0.75rem; top: -4rem;
+    background: var(--signal); color: var(--signal-ink);
+    padding: 0.5rem 0.9rem; font-family: var(--sans); z-index: 10;
+  }
+  .skip:focus { top: 0.75rem; }
+
+  /* ---------- Page frame ---------- */
+  .page { max-width: 1240px; margin: 0 auto; padding: clamp(0.75rem, 3vw, 2.5rem); }
+  .sheet { background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; }
+
+  /* ---------- Masthead ---------- */
+  .masthead { padding: clamp(1.25rem, 4vw, 3rem) clamp(1.25rem, 4vw, 3rem) 0; }
+  .org {
+    font-family: var(--sans); font-weight: 600; font-size: 0.95rem;
+    color: var(--steel); margin: 0 0 1.25rem; letter-spacing: 0.01em;
+  }
+  .org b { color: var(--signal); font-weight: 700; }
+
+  h1 {
+    font-family: var(--sans); font-weight: 700;
+    font-size: clamp(1.9rem, 5vw, 3.1rem);
+    line-height: 1.1; letter-spacing: -0.02em;
+    margin: 0 0 0.6rem; max-width: 22ch;
+  }
+  .subtitle {
+    font-family: var(--sans);
+    font-size: clamp(1rem, 2.2vw, 1.2rem);
+    color: var(--steel); margin: 0 0 2rem; max-width: 60ch;
+  }
+
+  /* Voltage ruler with the amplifier's job marked on it */
+  .ruler { position: relative; margin: 0 14px 2.25rem; padding-top: 2.4rem; color: var(--steel); }
+  .stretch {
+    position: absolute; top: 0; left: 33%; right: 0; height: 1.3rem;
+    border: 1.5px solid var(--signal); border-bottom: 0;
+    color: var(--signal);
+    font-family: var(--sans); font-size: 0.8rem; font-weight: 600;
+    text-align: center; line-height: 1;
+  }
+  .stretch span {
+    position: absolute; left: 50%; top: -0.5rem; transform: translateX(-50%);
+    background: var(--paper); padding: 0 0.6rem; white-space: nowrap;
+  }
+  .stretch .short { display: none; }
+  .ruler-line { position: relative; height: 2.4rem; }
+  .ruler-line::before {
+    content: ""; position: absolute; left: 0; right: 0; top: 0;
+    height: 4px; background: var(--signal);
+  }
+  .ticks { display: flex; height: 100%; }
+  .ticks span {
+    flex: 1 1 0; position: relative;
+    border-left: 1px solid currentColor; height: 14px; margin-top: 4px;
+  }
+  .ticks span::after {
+    content: ""; position: absolute; left: 50%; top: 0;
+    height: 7px; border-left: 1px solid currentColor;
+  }
+  .ticks span.end { flex: 0 0 0; width: 0; }
+  .ticks span.end::after { display: none; }
+  .ticks i {
+    position: absolute; top: 20px; left: 0; transform: translateX(-50%);
+    font-style: normal; font-family: var(--mono); font-size: 0.72rem;
+    line-height: 1; white-space: nowrap;
+  }
+  .ticks span.hl i { color: var(--signal); font-weight: 500; }
+
+  .meta {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    margin: 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+    font-family: var(--sans);
+  }
+  .meta div { padding: 0.85rem 1rem 0.85rem 0; }
+  .meta dt { font-size: 0.82rem; color: var(--steel); margin: 0 0 0.15rem; }
+  .meta dd { margin: 0; font-weight: 500; font-size: 0.96rem; }
+
+  /* ---------- Layout ---------- */
+  .layout {
+    display: grid; grid-template-columns: 1fr;
+    padding: 0 clamp(1.25rem, 4vw, 3rem) clamp(1.5rem, 4vw, 3rem);
+  }
+
+  nav.toc {
+    font-family: var(--sans); font-size: 0.93rem;
+    margin: 1.5rem 0 0.5rem; padding: 1rem 1.1rem;
+    background: var(--tint); border: 1px solid var(--rule); border-radius: 4px;
+  }
+  nav.toc p { margin: 0 0 0.4rem; font-weight: 600; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.1rem; }
+  nav.toc a { display: block; padding: 0.3rem 0; text-decoration: none; color: var(--ink); }
+  nav.toc a:hover { color: var(--signal); text-decoration: underline; }
+  nav.toc .n { color: var(--steel); display: inline-block; min-width: 1.6rem; }
+
+  @media (min-width: 1000px) {
+    .layout { grid-template-columns: 210px minmax(0, 1fr); column-gap: clamp(2rem, 4vw, 3.5rem); }
+    nav.toc {
+      position: sticky; top: 1.25rem; align-self: start;
+      background: none; border: 0; border-left: 2px solid var(--rule);
+      border-radius: 0; padding: 0.2rem 0 0.2rem 1rem; margin-top: 2rem;
+    }
+  }
+
+  main { min-width: 0; }
+
+  /* ---------- Content ---------- */
+  section { padding-top: 2.25rem; }
+  section + section { border-top: 1px solid var(--rule); margin-top: 2.25rem; }
+
+  h2 {
+    font-family: var(--sans); font-weight: 600;
+    font-size: clamp(1.4rem, 3.2vw, 1.8rem);
+    line-height: 1.2; letter-spacing: -0.01em;
+    margin: 0 0 1rem; display: flex; gap: 0.7rem; align-items: baseline;
+  }
+  h2 .n { color: var(--signal); font-weight: 600; flex: none; }
+  h3 { font-family: var(--sans); font-weight: 600; font-size: 1.08rem; margin: 1.9rem 0 0.4rem; }
+
+  p { margin: 0 0 1rem; max-width: 68ch; }
+  ul, ol.plain { margin: 0 0 1.1rem; padding-left: 1.3rem; max-width: 68ch; }
+  li { margin-bottom: 0.45rem; }
+  li::marker { color: var(--steel); }
+  strong { font-weight: 600; }
+  sub, sup { line-height: 0; }
+
+  code { font-family: var(--mono); font-size: 0.88em; background: var(--tint); border: 1px solid var(--rule); padding: 0.05em 0.35em; border-radius: 3px; }
+
+  .formula {
+    display: block; margin: 0.25rem 0 1.15rem; padding: 0.85rem 1rem;
+    font-family: var(--mono); font-size: 0.9rem;
+    background: var(--signal-soft); border-left: 4px solid var(--signal);
+    overflow-x: auto; max-width: 68ch; line-height: 1.6; white-space: pre-wrap;
+  }
+
+  pre.code {
+    margin: 0.5rem 0 1.25rem; padding: 1rem 1.1rem;
+    background: var(--tint); border: 1px solid var(--rule); border-radius: 4px;
+    font-family: var(--mono); font-size: 0.8rem; line-height: 1.55;
+    overflow-x: auto; max-width: 78ch; tab-size: 4;
+  }
+  pre.code code { background: none; border: 0; padding: 0; font-size: inherit; }
+
+  /* Inline citations */
+  .c { font-family: var(--sans); font-size: 0.72em; white-space: nowrap; }
+  .c a { text-decoration: none; font-weight: 600; padding: 0 0.1em; }
+  .c a:hover { text-decoration: underline; }
+
+  /* Evidence tags: text-labelled, never colour-only */
+  .tag {
+    display: inline-block; font-family: var(--sans); font-size: 0.72rem; font-weight: 600;
+    line-height: 1.5; padding: 0 0.5em; border-radius: 3px; border: 1px solid;
+    vertical-align: baseline; white-space: nowrap;
+  }
+  .tag.ds   { color: var(--signal); background: var(--signal-soft); border-color: var(--signal); }
+  .tag.calc { color: var(--ink); background: var(--tint); border-color: var(--steel); }
+  .tag.prop { color: var(--ink); background: transparent; border-color: var(--steel); border-style: dashed; }
+  .tag.todo { color: var(--note-ink); background: var(--note-bg); border-color: var(--note-rule); }
+
+  .callout {
+    font-family: var(--sans); font-size: 0.97rem; line-height: 1.6;
+    padding: 1rem 1.15rem; margin: 1.5rem 0;
+    background: var(--note-bg); color: var(--note-ink);
+    border: 1px solid var(--note-rule); border-left-width: 5px; border-radius: 3px; max-width: 72ch;
+  }
+  .callout p { margin: 0; font-size: inherit; }
+  .callout p + p { margin-top: 0.6rem; }
+
+  .summary {
+    font-family: var(--sans); font-size: 1.05rem; line-height: 1.6;
+    margin: 1.75rem 0 0; padding: 1.1rem 1.25rem;
+    background: var(--signal-soft); border-radius: 4px; max-width: 72ch;
+  }
+  .summary p { margin: 0; max-width: none; }
+  .summary strong { color: var(--signal); }
+
+  /* Verification status panel */
+  .status {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1px; background: var(--rule);
+    border: 1px solid var(--rule); border-radius: 4px; overflow: hidden;
+    margin: 2rem 0 0; font-family: var(--sans);
+  }
+  .status > div { background: var(--paper); padding: 0.85rem 1rem; }
+  .status dt { font-size: 0.82rem; color: var(--steel); margin: 0 0 0.15rem; }
+  .status dd { margin: 0; font-weight: 600; }
+  .status .done dd { color: var(--signal); }
+  .status .done dd::before { content: "\2713\00a0"; }
+  .status .todo { background: var(--note-bg); }
+  .status .todo dt { color: var(--note-ink); }
+  .status .todo dd { color: var(--note-ink); }
+  .status .todo dd::before { content: "\25CB\00a0"; }
+  .status-note { font-family: var(--sans); font-size: 0.9rem; color: var(--steel); margin: 0.6rem 0 0; max-width: 72ch; }
+
+  .legend-tags {
+    display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem;
+    font-family: var(--sans); font-size: 0.88rem; color: var(--steel);
+    margin: 1rem 0 0; padding: 0; list-style: none; max-width: none;
+  }
+  .legend-tags li { margin: 0; }
+
+  /* Tables */
+  .table-wrap {
+    overflow-x: auto; margin: 0.5rem 0 1.5rem;
+    border: 1px solid var(--rule); border-radius: 4px; -webkit-overflow-scrolling: touch;
+  }
+  table {
+    border-collapse: collapse; width: 100%;
+    font-family: var(--sans); font-size: 0.9rem; line-height: 1.45; min-width: 560px;
+  }
+  table.wide { min-width: 760px; }
+  caption {
+    text-align: left; padding: 0.65rem 0.9rem; font-weight: 600;
+    background: var(--tint); border-bottom: 1px solid var(--rule);
+  }
+  th, td { text-align: left; padding: 0.6rem 0.9rem; vertical-align: top; }
+  thead th { border-bottom: 2px solid var(--rule); font-weight: 600; background: var(--paper); }
+  tbody th { font-weight: 600; }
+  tbody tr + tr > * { border-top: 1px solid var(--rule); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.pick > * { background: var(--signal-soft); }
+
+  /* Figures */
+  figure { margin: 1.5rem 0; }
+  figcaption { font-family: var(--sans); font-size: 0.88rem; color: var(--steel); margin-top: 0.6rem; max-width: 72ch; }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 4px; padding: 0.75rem; background: var(--paper); }
+  .scroll-hint { display: none; font-family: var(--sans); font-size: 0.82rem; color: var(--steel); margin: 0 0 0.4rem; }
+
+  svg text { font-family: var(--sans); fill: var(--ink); font-size: 12.5px; }
+  svg .s { fill: var(--steel); }
+  svg .b { font-weight: 600; }
+  svg .big { font-size: 18px; font-weight: 600; }
+  svg .wire { stroke: var(--ink); stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg .pwr { stroke: var(--steel); stroke-width: 1.6; stroke-dasharray: 5 4; fill: none; }
+  svg .box { fill: var(--tint); stroke: var(--ink); stroke-width: 1.8; }
+  svg .box.out { fill: var(--signal); stroke: var(--signal); }
+  svg .box.pw { fill: var(--paper); stroke: var(--steel); stroke-dasharray: 5 4; }
+  svg .opamp { fill: var(--paper); stroke: var(--ink); stroke-width: 1.8; stroke-linejoin: round; }
+  svg .dot { fill: var(--ink); }
+  svg .term { fill: var(--paper); stroke: var(--ink); stroke-width: 1.8; }
+  svg .ah { fill: var(--ink); }
+  svg .ahs { fill: var(--steel); }
+  svg text.on-out { fill: var(--signal-ink); }
+
+  .diagram-wrap { container-type: inline-size; }
+  .bd { width: 100%; height: auto; display: block; }
+  .bd-list { display: none; list-style: none; margin: 0; padding: 0; max-width: none; font-family: var(--sans); }
+  .bd-list li { position: relative; margin: 0; padding: 0 0 1.1rem 1.4rem; border-left: 2px solid var(--ink); font-size: 0.93rem; }
+  .bd-list li:last-child { padding-bottom: 0; border-left-color: var(--signal); }
+  .bd-list li::before { content: ""; position: absolute; left: -7px; top: 0.3rem; width: 12px; height: 12px; background: var(--paper); border: 2px solid var(--ink); border-radius: 50%; }
+  .bd-list li:last-child::before { background: var(--signal); border-color: var(--signal); }
+  .bd-list b { display: block; font-size: 1rem; }
+  .bd-list span { color: var(--steel); display: block; }
+  @container (max-width: 639px) {
+    .bd { display: none; }
+    .bd-list { display: block; }
+  }
+
+  @media (max-width: 760px) {
+    .scroll-hint { display: block; }
+    .sch { min-width: 700px; }
+  }
+
+  .two-col { display: grid; gap: 1.25rem 2.5rem; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); }
+  .two-col > * { min-width: 0; }
+  .two-col h3 { margin-top: 0.4rem; }
+
+  .panel { border-top: 3px solid var(--rule); padding-top: 0.4rem; }
+  .panel.pro { border-top-color: var(--signal); }
+
+  .refs { padding-left: 1.5rem; max-width: none; font-family: var(--sans); font-size: 0.92rem; line-height: 1.55; }
+  .refs li { margin-bottom: 0.9rem; max-width: 80ch; }
+  .refs a { overflow-wrap: anywhere; }
+  .refs .note { display: block; color: var(--steel); font-size: 0.86rem; }
+
+  footer {
+    padding: 1.25rem clamp(1.25rem, 4vw, 3rem) 1.75rem; border-top: 1px solid var(--rule);
+    font-family: var(--sans); font-size: 0.85rem; color: var(--steel);
+  }
+  footer p { margin: 0 0 0.3rem; max-width: none; }
+
+  @media (max-width: 560px) {
+    body { font-size: 1rem; }
+    .ticks i { font-size: 0.62rem; }
+    .ticks span:nth-child(even) i { display: none; }
+    .stretch .long { display: none; }
+    .stretch .short { display: inline; }
+  }
+
+  @media print {
+    body { background: #fff; color: #000; font-size: 10.5pt; }
+    .page { padding: 0; max-width: none; }
+    .sheet { border: 0; }
+    nav.toc, .skip, .scroll-hint { display: none; }
+    .layout { display: block; }
+    section { break-inside: avoid-page; }
+    .table-wrap, figure, .callout { break-inside: avoid; }
+    .scroll, .table-wrap { overflow: visible; }
+    .sch { min-width: 0; }
+    a { color: inherit; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#content">Skip to report</a>
+
+<div class="page">
+  <article class="sheet">
+
+    <header class="masthead">
+      <p class="org"><b>NIDAR 2.0</b> Hardware Team</p>
+      <h1>Researching an MCU-Controlled 0–10 V Analog Output Circuit</h1>
+      <p class="subtitle">Task 2 report: a beginner-friendly STM32 Blue Pill design that uses an external DAC and an op-amp, with datasheet sources and the verification work still to do.</p>
+
+      <div class="ruler" aria-hidden="true">
+        <div class="stretch"><span><b class="long">Op-amp gain ≈ 3.03 stretches 0–3.3 V to 0–10 V</b><b class="short">Gain ≈ 3.03</b></span></div>
+        <div class="ruler-line">
+          <div class="ticks">
+            <span><i>0</i></span><span><i>1</i></span><span><i>2</i></span><span class="hl"><i>3.3</i></span><span><i>4</i></span><span><i>5</i></span><span><i>6</i></span><span><i>7</i></span><span><i>8</i></span><span><i>9</i></span><span class="end"><i>10 V</i></span>
+          </div>
+        </div>
+      </div>
+
+      <dl class="meta">
+        <div><dt>Project</dt><dd>NIDAR 2.0 Hardware Team</dd></div>
+        <div><dt>Task</dt><dd>Task 2: Circuit research</dd></div>
+        <div><dt>Builds on</dt><dd>Task 1: 0–10 V signal study</dd></div>
+        <div><dt>Report type</dt><dd>Literature and design research</dd></div>
+        <div><dt>Date</dt><dd>25 October 2026</dd></div>
+        <div><dt>Status</dt><dd>Draft 1.0, not yet reviewed</dd></div>
+      </dl>
+    </header>
+
+    <div class="layout">
+      <nav class="toc" aria-label="Report contents">
+        <p>Contents</p>
+        <ol>
+          <li><a href="#s1"><span class="n">1</span>How the signal is made</a></li>
+          <li><a href="#s2"><span class="n">2</span>Beginner circuit</a></li>
+          <li><a href="#s3"><span class="n">3</span>Stage by stage</a></li>
+          <li><a href="#s4"><span class="n">4</span>Options compared</a></li>
+          <li><a href="#s5"><span class="n">5</span>Diagram and parts</a></li>
+          <li><a href="#s6"><span class="n">6</span>Advantages and limits</a></li>
+          <li><a href="#s7"><span class="n">7</span>Research vs. verification</a></li>
+          <li><a href="#refs"><span class="n"></span>Sources</a></li>
+        </ol>
+      </nav>
+
+      <main id="content">
+
+        <dl class="status" aria-label="Verification status">
+          <div class="done"><dt>Research and design proposal</dt><dd>Complete (this report)</dd></div>
+          <div class="todo"><dt>Circuit simulation</dt><dd>Not started</dd></div>
+          <div class="todo"><dt>Breadboard or hardware test</dt><dd>Not started</dd></div>
+        </dl>
+        <p class="status-note">Everything in this report is a researched proposal. Figures come from datasheets or from arithmetic on them. No simulation or measurement exists yet, so no result here should be read as achieved performance.</p>
+
+        <ul class="legend-tags" aria-label="Source labels used in this report">
+          <li><span class="tag ds">Datasheet</span> taken from a cited document</li>
+          <li><span class="tag calc">Calculated</span> our arithmetic on those values</li>
+          <li><span class="tag prop">Proposed</span> a design choice, untested</li>
+          <li><span class="tag todo">Not done</span> still to be performed</li>
+        </ul>
+
+        <div class="summary">
+          <p><strong>Summary.</strong> The proposed baseline is: Blue Pill → I²C → MCP4725 DAC on 3.3 V → LM358 non-inverting amplifier with gain ≈ 3.03 on a +15 V rail → 47 Ω series resistor and TVS clamp → 0–10 V output. It uses few parts, all available in breadboard-friendly form. Its main limits are that the DAC’s accuracy is much worse than its 12-bit resolution suggests, the 0 V and 10 V ends are the weakest points, and the DAC’s power-up default value must be changed before connecting real equipment.</p>
+        </div>
+
+        <!-- 1 -->
+        <section id="s1" aria-labelledby="s1-h">
+          <h2 id="s1-h"><span class="n">1</span>How an MCU generates an adjustable analog signal</h2>
+          <p>A microcontroller works with integers. To make a voltage it hands an integer code to a digital-to-analog converter (DAC). For an N-bit DAC with reference voltage V<sub>REF</sub>, the ideal output is:</p>
+          <span class="formula">V_dac = V_REF × code / 2^N</span>
+          <p>The signal is adjustable because firmware can write a new code at any time, and the DAC holds its last value until the next write. The MCP4725 used here is a 12-bit part whose reference is its own supply pin, so its output spans 0 V to V<sub>DD</sub><span class="c"><sup><a href="#r1" title="MCP4725 datasheet">[1]</a></sup></span>.</p>
+          <p>Two things stop the DAC from driving a 0–10 V line directly. First, powered from 3.3 V it can only reach about 3.3 V. Second, its output stage is specified for light loads, with a datasheet figure of 5 kΩ and up to 1000 pF<span class="c"><sup><a href="#r1">[1]</a></sup></span>. An op-amp fixes both. It multiplies the DAC voltage by a fixed gain and drives the load, and it can run from a higher supply rail than the DAC.</p>
+          <p>An external DAC is needed because the STM32F103C8 has no on-chip DAC; its datasheet lists ADCs, timers and serial interfaces, and its supply and I/O range is 2.0–3.6 V<span class="c"><sup><a href="#r7">[7]</a></sup></span>.</p>
+
+          <span class="formula">V_out = G × V_DD × code / 4096        G = 1 + R_f / R_g</span>
+
+          <div class="table-wrap">
+            <table>
+              <caption>Ideal output for key codes, assuming V<sub>DD</sub> = 3.3 V and G = 10 / 3.3 ≈ 3.03 <span class="tag calc">Calculated</span></caption>
+              <thead>
+                <tr><th scope="col" class="num">12-bit code</th><th scope="col" class="num">DAC output</th><th scope="col" class="num">Circuit output</th><th scope="col">Note</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="num">0</td><td class="num">0 V</td><td class="num">0 V</td><td>Lowest value</td></tr>
+                <tr><td class="num">100</td><td class="num">0.081 V</td><td class="num">0.244 V</td><td>Lower end of the datasheet’s recommended code range<span class="c"><sup><a href="#r1">[1]</a></sup></span></td></tr>
+                <tr><td class="num">1024</td><td class="num">0.825 V</td><td class="num">2.500 V</td><td></td></tr>
+                <tr><td class="num">2048</td><td class="num">1.650 V</td><td class="num">5.000 V</td><td>Mid-scale</td></tr>
+                <tr><td class="num">3072</td><td class="num">2.475 V</td><td class="num">7.500 V</td><td></td></tr>
+                <tr><td class="num">4000</td><td class="num">3.223 V</td><td class="num">9.766 V</td><td>Upper end of the recommended code range<span class="c"><sup><a href="#r1">[1]</a></sup></span></td></tr>
+                <tr><td class="num">4095</td><td class="num">3.299 V</td><td class="num">9.998 V</td><td>One step below 10 V, because the top code is V<sub>DD</sub> minus 1 LSB<span class="c"><sup><a href="#r1">[1]</a></sup></span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>One step at the output is 10 V / 4096 ≈ 2.44 mV <span class="tag calc">Calculated</span>. Step size is resolution only; accuracy is covered in section 6.</p>
+        </section>
+
+        <!-- 2 -->
+        <section id="s2" aria-labelledby="s2-h">
+          <h2 id="s2-h"><span class="n">2</span>A beginner-friendly circuit for the STM32 Blue Pill</h2>
+          <p>The Blue Pill carries the STM32F103C8T6, a 72 MHz Arm Cortex-M3 with two I²C and two SPI interfaces<span class="c"><sup><a href="#r7">[7]</a></sup></span>. The Blue Pill is a third-party board, so its pinout and on-board 3.3 V regulator vary between makers and clones. Check your own board before wiring.</p>
+          <p><strong>Proposed baseline</strong> <span class="tag prop">Proposed</span>: MCP4725 DAC on I²C, LM358 op-amp in a non-inverting gain stage, a trimmer for full-scale calibration, and a small protected output stage. The reasons it suits a first build:</p>
+          <ul>
+            <li><strong>Two signal wires.</strong> I²C needs only SCL and SDA. The STM32 I2C1 peripheral is normally on PB6 (SCL) and PB7 (SDA)<span class="c"><sup><a href="#r7">[7]</a></sup></span>.</li>
+            <li><strong>Matching logic levels.</strong> The MCP4725 reads an input as high above 0.7 × V<sub>DD</sub><span class="c"><sup><a href="#r1">[1]</a></sup></span>. At 3.3 V that is 2.31 V, which a 3.3 V STM32 meets. At a 5 V supply it would be 3.5 V, which a 3.3 V bus cannot guarantee <span class="tag calc">Calculated</span>. So the DAC is powered from 3.3 V and needs no level shifter.</li>
+            <li><strong>Few, common parts.</strong> One DAC, one op-amp, two resistors plus a trimmer, and decoupling. The LM358 is available in a DIP-8 package that plugs into a breadboard, and MCP4725 breakout boards are widely sold.</li>
+            <li><strong>Upgrade path.</strong> If more resolution, a second channel or an external reference is needed later, the SPI parts in section 4 can replace the DAC with the same op-amp stage.</li>
+          </ul>
+          <p>A PWM output filtered by an RC network is another way to make an analog level. It is not evaluated here because the project has chosen the external-DAC route.</p>
+        </section>
+
+        <!-- 3 -->
+        <section id="s3" aria-labelledby="s3-h">
+          <h2 id="s3-h"><span class="n">3</span>Stage-by-stage explanation</h2>
+          <p>Figure 2 in section 5 shows these stages as a schematic.</p>
+
+          <h3>3.1 DAC stage (MCP4725)</h3>
+          <ul>
+            <li>Single supply of 2.7–5.5 V, 12-bit buffered output, I²C up to 3.4 Mb/s, 6 µs typical settling<span class="c"><sup><a href="#r1">[1]</a></sup></span> <span class="tag ds">Datasheet</span>.</li>
+            <li>V<sub>DD</sub> is also the reference, so noise or error on the 3.3 V rail passes straight to the output. The datasheet suggests a 0.1 µF ceramic plus a 10 µF capacitor close to the pin<span class="c"><sup><a href="#r1">[1]</a></sup></span> <span class="tag ds">Datasheet</span>.</li>
+            <li>SDA and SCL are open-drain and need pull-ups; 1–10 kΩ is the typical range given<span class="c"><sup><a href="#r1">[1]</a></sup></span>. Many breakout boards already include them.</li>
+            <li>The “fast mode” write updates the output without touching the on-chip EEPROM, which is rated for 1 million write cycles<span class="c"><sup><a href="#r1">[1]</a></sup></span>. Use fast mode for normal operation.</li>
+            <li>For gain error under 1 % of full scale, the datasheet advises using codes 100 to 4000 rather than the full range<span class="c"><sup><a href="#r1">[1]</a></sup></span> <span class="tag ds">Datasheet</span>. The 7-bit address is 0x60 or 0x61 for the A0 variant and 0x62 or 0x63 for the A1 variant, set by the A0 pin<span class="c"><sup><a href="#r1">[1]</a></sup></span>.</li>
+          </ul>
+
+          <h3>3.2 Op-amp and feedback resistors</h3>
+          <p>The op-amp is a non-inverting amplifier. The DAC drives the + input, and a divider from the output to the − input sets the gain:</p>
+          <span class="formula">G = 1 + R_f / R_g</span>
+          <p>The target gain is 10 V / V<sub>DD</sub>. With V<sub>DD</sub> = 3.3 V, G = 3.03, so R<sub>f</sub>/R<sub>g</sub> = 2.03 <span class="tag calc">Calculated</span>. The 3.3 V rail will not be exact, so a fixed resistor pair would miss 10 V. The proposal is R<sub>g</sub> = 10 kΩ and R<sub>f</sub> = 18 kΩ in series with a 5 kΩ multi-turn trimmer, which adjusts R<sub>f</sub>/R<sub>g</sub> from 1.8 to 2.3 <span class="tag prop">Proposed</span>.</p>
+
+          <div class="table-wrap">
+            <table>
+              <caption>Gain needed if the 3.3 V rail varies <span class="tag calc">Calculated</span></caption>
+              <thead>
+                <tr><th scope="col" class="num">Actual V<sub>DD</sub></th><th scope="col" class="num">Gain needed (10 V ÷ V<sub>DD</sub>)</th><th scope="col" class="num">R<sub>f</sub> / R<sub>g</sub> needed</th><th scope="col">Covered by trimmer range 1.8–2.3?</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="num">3.135 V (−5 %)</td><td class="num">3.19</td><td class="num">2.19</td><td>Yes</td></tr>
+                <tr><td class="num">3.300 V</td><td class="num">3.03</td><td class="num">2.03</td><td>Yes</td></tr>
+                <tr><td class="num">3.465 V (+5 %)</td><td class="num">2.89</td><td class="num">1.89</td><td>Yes</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>The divider (R<sub>g</sub> + R<sub>f</sub> ≈ 30 kΩ) draws only about 0.33 mA at 10 V <span class="tag calc">Calculated</span>, so it adds little load. Use 1 % metal-film resistors and keep the trimmer’s temperature drift in mind.</p>
+          <p>For a single-supply LM358 the output can swing down to about ground, with a typical headroom to the negative rail of 5 mV (no load)<span class="c"><sup><a href="#r5">[5]</a></sup></span> <span class="tag ds">Datasheet</span>.</p>
+
+          <h3>3.3 Power supply</h3>
+          <ul>
+            <li><strong>3.3 V rail.</strong> From the Blue Pill’s on-board regulator, which is fed by USB 5 V. It powers the MCU and the DAC. Because it is the DAC reference, a separate low-noise 3.3 V regulator or a filtered tap is a worthwhile later improvement <span class="tag prop">Proposed</span>.</li>
+            <li><strong>Op-amp rail: +15 V.</strong> The LM358’s output can only rise to about 1.5–2 V below its supply<span class="c"><sup><a href="#r5">[5]</a></sup><sup><a href="#r8">[8]</a></sup></span> <span class="tag ds">Datasheet</span>. On 12 V that leaves roughly 10–10.5 V, no margin for a loaded 10 V output. On 15 V the ceiling is about 13 V <span class="tag calc">Calculated</span>. The LM358-N is specified up to 32 V<span class="c"><sup><a href="#r5">[5]</a></sup></span>, so 15 V is comfortable.</li>
+            <li><strong>Rail-to-rail alternative.</strong> A rail-to-rail output op-amp such as the OPA192 (4.5–36 V) reaches within about 0.1 V of the rail at a 10 kΩ load<span class="c"><sup><a href="#r6">[6]</a></sup></span>, so it could run from a 12 V rail.</li>
+            <li><strong>Decoupling and grounding.</strong> 100 nF plus 10 µF at the op-amp supply pins, and one common ground shared by the Blue Pill, DAC, op-amp and output ground. Keep the DAC’s ground return on a clean path.</li>
+          </ul>
+
+          <h3>3.4 Output stage</h3>
+          <ul>
+            <li><strong>Series resistor R3 (47 Ω).</strong> Isolates the op-amp from cable capacitance and limits fault current. The feedback is taken before R3, so a load R<sub>L</sub> sees a small drop of R3 / (R3 + R<sub>L</sub>), about 0.47 % into 10 kΩ <span class="tag calc">Calculated</span>.</li>
+            <li><strong>TVS diode D1.</strong> A unidirectional clamp from the output to ground for transients and miswiring. Its voltage rating must sit above 10 V plus margin. The exact part is to be chosen <span class="tag prop">Proposed</span>.</li>
+            <li><strong>Optional C3 (10 nF).</strong> Adds high-frequency noise filtering. With a 47 Ω R3 the corner is near 340 kHz <span class="tag calc">Calculated</span>.</li>
+            <li><strong>Not isolated.</strong> The output shares ground with the Blue Pill. Receiving equipment is normally a high-impedance input (10 kΩ or more), which keeps load current near or below 1 mA at 10 V.</li>
+          </ul>
+        </section>
+
+        <!-- 4 -->
+        <section id="s4" aria-labelledby="s4-h">
+          <h2 id="s4-h"><span class="n">4</span>DAC and op-amp options compared</h2>
+          <p>All figures below come from the cited manufacturer documents <span class="tag ds">Datasheet</span>. The highlighted row in each table is the proposed baseline. Confirm values against the current official datasheet before buying.</p>
+
+          <div class="table-wrap">
+            <table class="wide">
+              <caption>DAC options</caption>
+              <thead>
+                <tr><th scope="col">Part</th><th scope="col">Resolution, channels, interface</th><th scope="col">Reference and supply</th><th scope="col">Accuracy and speed</th><th scope="col">Fit for this project</th></tr>
+              </thead>
+              <tbody>
+                <tr class="pick">
+                  <th scope="row">MCP4725<span class="c"><sup><a href="#r1">[1]</a></sup></span></th>
+                  <td>12-bit, 1 channel, I²C (up to 3.4 Mb/s), on-chip EEPROM</td>
+                  <td>Reference is V<sub>DD</sub> (no reference pin). 2.7–5.5 V.</td>
+                  <td>INL ±2 LSB typ, ±14.5 LSB max. Settling 6 µs typ.</td>
+                  <td>Best for a first build: two wires, breakout boards common. Power-up value comes from EEPROM.</td>
+                </tr>
+                <tr>
+                  <th scope="row">MCP4922<span class="c"><sup><a href="#r2">[2]</a></sup></span></th>
+                  <td>12-bit, 2 channels, SPI (up to 20 MHz), LDAC and SHDN pins</td>
+                  <td>External reference pin per channel, selectable 1× or 2× output gain. 2.7–5.5 V.</td>
+                  <td>INL ±2 LSB typ, ±12 LSB max. Settling 4.5 µs typ.</td>
+                  <td>Good upgrade: separate reference removes the V<sub>DD</sub> dependence. DIP-14, SOIC-14 and TSSOP-14 packages.</td>
+                </tr>
+                <tr>
+                  <th scope="row">DAC8552<span class="c"><sup><a href="#r3">[3]</a></sup></span></th>
+                  <td>16-bit, 2 channels, 3-wire SPI (up to 30 MHz at 5 V)</td>
+                  <td>External reference. 2.7–5.5 V.</td>
+                  <td>Relative accuracy 4 LSB typ; linearity quoted over a reduced code range. Settling 10 µs. Powers up at zero scale.</td>
+                  <td>Finer steps and a safe zero-scale power-up. Small 8-pin package needs a breakout board.</td>
+                </tr>
+                <tr>
+                  <th scope="row">DAC8760<span class="c"><sup><a href="#r4">[4]</a></sup></span></th>
+                  <td>16-bit, 1 channel, SPI. Programmable 0–5 V, 0–10 V, ±5 V, ±10 V voltage output and 4–20 mA current output.</td>
+                  <td>Internal 5 V reference. Analog supply 10–36 V.</td>
+                  <td>Total unadjusted error ±0.1 % FSR max; DNL ±1 LSB max.</td>
+                  <td>Replaces the DAC and op-amp stage, so best for a later product. Surface-mount only (VQFN-40 or HTSSOP-24), harder for a first prototype.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="table-wrap">
+            <table class="wide">
+              <caption>Op-amp options</caption>
+              <thead>
+                <tr><th scope="col">Part</th><th scope="col">Supply</th><th scope="col">Output swing</th><th scope="col">Offset and speed</th><th scope="col">Fit for this project</th></tr>
+              </thead>
+              <tbody>
+                <tr class="pick">
+                  <th scope="row">LM358 (LMx58 family)<span class="c"><sup><a href="#r5">[5]</a></sup><sup><a href="#r8">[8]</a></sup></span></th>
+                  <td>3–32 V single supply</td>
+                  <td>Swings to ground; high side about 1.5–2 V below V+.</td>
+                  <td>Offset 2 mV typ. About 1 MHz unity-gain bandwidth and about 0.5 V/µs slew.</td>
+                  <td>Cheap, DIP-8, easy to source. Needs a 15 V rail. Offset is several times the DAC LSB, once multiplied by the gain.</td>
+                </tr>
+                <tr>
+                  <th scope="row">OPA192<span class="c"><sup><a href="#r6">[6]</a></sup></span></th>
+                  <td>4.5–36 V</td>
+                  <td>Rail-to-rail. Within 5 mV of the rails unloaded, about 0.1 V at a 10 kΩ load.</td>
+                  <td>Offset ±5 µV typ, ±25 µV max. 10 MHz bandwidth, 20 V/µs slew. Output ±65 mA, drives up to 1 nF.</td>
+                  <td>Much better accuracy at the 0 V end and works from 12 V. Costs more and comes in SOIC-8, VSSOP-8 or SOT-23-5, so it needs an adapter on a breadboard.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Recommendation</strong> <span class="tag prop">Proposed</span>: build the MCP4725 + LM358 baseline first because it is the cheapest and simplest to breadboard. If 0 V accuracy or the 12 V rail matters, swap in the OPA192. If the 3.3 V reference is the dominant error, move to the MCP4922 with an external reference. TI also lists the LM358B as a pin-compatible newer version with a 36 V rating<span class="c"><sup><a href="#r5">[5]</a></sup></span>, which is worth considering.</p>
+        </section>
+
+        <!-- 5 -->
+        <section id="s5" aria-labelledby="s5-h">
+          <h2 id="s5-h"><span class="n">5</span>Circuit block diagram and component list</h2>
+
+          <figure class="diagram-wrap">
+            <svg class="bd" viewBox="0 0 930 270" role="img" aria-labelledby="bd-t bd-d">
+              <title id="bd-t">Block diagram of the proposed 0–10 V output circuit</title>
+              <desc id="bd-d">Five blocks in a row. The STM32F103C8T6 Blue Pill sends an I2C digital code to the MCP4725 DAC. The DAC outputs 0 to 3.3 volts to an LM358 op-amp stage with gain of about 3.03. That feeds an output stage with a series resistor, TVS diode and capacitor, and then the 0 to 10 volt output. The Blue Pill 3.3 volt regulator powers the MCU and DAC. A separate 15 volt supply powers the op-amp.</desc>
+              <defs>
+                <marker id="bd-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0 0L10 5L0 10z"/></marker>
+                <marker id="bd-as" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path class="ahs" d="M0 0L10 5L0 10z"/></marker>
+              </defs>
+
+              <g>
+                <rect class="box" x="10" y="30" width="150" height="90" rx="4"/>
+                <text class="b" x="85" y="62" text-anchor="middle">STM32F103C8T6</text>
+                <text class="s" x="85" y="84" text-anchor="middle">Blue Pill MCU</text>
+                <text class="s" x="85" y="102" text-anchor="middle">I²C1: PB6 / PB7</text>
+
+                <rect class="box" x="200" y="30" width="150" height="90" rx="4"/>
+                <text class="b" x="275" y="62" text-anchor="middle">MCP4725</text>
+                <text class="s" x="275" y="84" text-anchor="middle">12-bit I²C DAC</text>
+                <text class="s" x="275" y="102" text-anchor="middle">V<tspan baseline-shift="sub" font-size="10">DD</tspan> = 3.3 V</text>
+
+                <rect class="box" x="390" y="30" width="150" height="90" rx="4"/>
+                <text class="b" x="465" y="62" text-anchor="middle">Op-amp stage</text>
+                <text class="s" x="465" y="84" text-anchor="middle">LM358, gain ≈ 3.03</text>
+                <text class="s" x="465" y="102" text-anchor="middle">supply +15 V</text>
+
+                <rect class="box" x="580" y="30" width="150" height="90" rx="4"/>
+                <text class="b" x="655" y="62" text-anchor="middle">Output stage</text>
+                <text class="s" x="655" y="84" text-anchor="middle">R3 + TVS + C3</text>
+                <text class="s" x="655" y="102" text-anchor="middle">protect and filter</text>
+
+                <rect class="box out" x="770" y="30" width="150" height="90" rx="4"/>
+                <text class="b on-out" x="845" y="62" text-anchor="middle">0–10 V output</text>
+                <text class="on-out" x="845" y="84" text-anchor="middle">to external device</text>
+                <text class="on-out" x="845" y="102" text-anchor="middle">common GND</text>
+              </g>
+
+              <line class="wire" x1="162" y1="75" x2="198" y2="75" marker-end="url(#bd-a)"/>
+              <line class="wire" x1="352" y1="75" x2="388" y2="75" marker-end="url(#bd-a)"/>
+              <line class="wire" x1="542" y1="75" x2="578" y2="75" marker-end="url(#bd-a)"/>
+              <line class="wire" x1="732" y1="75" x2="768" y2="75" marker-end="url(#bd-a)"/>
+
+              <g class="s" text-anchor="middle">
+                <text x="180" y="142">I²C</text><text x="180" y="157">digital code</text>
+                <text x="370" y="142">0–3.3 V</text><text x="370" y="157">analog</text>
+                <text x="560" y="142">≈ 0–10 V</text><text x="560" y="157">analog</text>
+                <text x="750" y="142">0–10 V</text><text x="750" y="157">protected</text>
+              </g>
+
+              <rect class="box pw" x="10" y="192" width="340" height="50" rx="4"/>
+              <text class="b" x="180" y="214" text-anchor="middle">USB 5 V → Blue Pill 3.3 V regulator</text>
+              <text class="s" x="180" y="232" text-anchor="middle">powers the MCU and the DAC (V<tspan baseline-shift="sub" font-size="10">DD</tspan> is also the DAC reference)</text>
+              <rect class="box pw" x="390" y="192" width="150" height="50" rx="4"/>
+              <text class="b" x="465" y="214" text-anchor="middle">+15 V DC supply</text>
+              <text class="s" x="465" y="232" text-anchor="middle">op-amp only</text>
+              <line class="pwr" x1="85" y1="190" x2="85" y2="124" marker-end="url(#bd-as)"/>
+              <line class="pwr" x1="275" y1="190" x2="275" y2="124" marker-end="url(#bd-as)"/>
+              <line class="pwr" x1="465" y1="190" x2="465" y2="124" marker-end="url(#bd-as)"/>
+              <text class="s" x="10" y="264">All stages share one common ground. Solid arrows are signals, dashed arrows are power.</text>
+            </svg>
+
+            <ol class="bd-list" aria-label="Block diagram as a list">
+              <li><b>STM32F103C8T6 (Blue Pill)</b><span>Sends an I²C digital code (PB6 / PB7)</span></li>
+              <li><b>MCP4725 DAC</b><span>Powered from 3.3 V. Outputs 0–3.3 V analog</span></li>
+              <li><b>Op-amp stage (LM358)</b><span>Gain ≈ 3.03 on a +15 V rail. Outputs about 0–10 V</span></li>
+              <li><b>Output stage</b><span>R3, TVS and C3 protect and filter</span></li>
+              <li><b>0–10 V output</b><span>To the external device, with a common ground</span></li>
+            </ol>
+            <figcaption>Figure 1. Block diagram of the proposed circuit. Power: the Blue Pill’s 3.3 V regulator feeds the MCU and DAC, and a separate +15 V supply feeds the op-amp. Proposed design, not simulated or built.</figcaption>
+          </figure>
+
+          <figure>
+            <p class="scroll-hint">Scroll sideways to see the whole schematic.</p>
+            <div class="scroll" tabindex="0" role="group" aria-label="Conceptual schematic, scrollable">
+              <svg class="sch" viewBox="0 0 780 330" role="img" aria-labelledby="sch-t sch-d" width="100%">
+                <title id="sch-t">Conceptual schematic of the DAC, op-amp gain stage and output stage</title>
+                <desc id="sch-d">The MCP4725 DAC output feeds the non-inverting input of an op-amp. The op-amp output returns to the inverting input through feedback resistor Rf, and the inverting input connects to ground through Rg. The op-amp output then passes through a 47 ohm series resistor R3 to the output terminal. A TVS diode and a 10 nanofarad capacitor connect from the output node to ground.</desc>
+                <defs>
+                  <marker id="sch-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0 0L10 5L0 10z"/></marker>
+                  <g id="gnd" class="wire"><line x1="-10" y1="0" x2="10" y2="0"/><line x1="-6" y1="5" x2="6" y2="5"/><line x1="-2" y1="10" x2="2" y2="10"/></g>
+                </defs>
+
+                <!-- I2C in -->
+                <line class="wire" x1="10" y1="130" x2="78" y2="130" marker-end="url(#sch-a)"/>
+                <text class="s" x="10" y="115">I²C from</text>
+                <text class="s" x="10" y="150">STM32</text>
+
+                <!-- DAC -->
+                <rect class="box" x="80" y="90" width="120" height="80" rx="4"/>
+                <text class="b" x="140" y="122" text-anchor="middle">MCP4725</text>
+                <text class="s" x="140" y="140" text-anchor="middle">12-bit DAC</text>
+                <text class="s" x="140" y="157" text-anchor="middle">V<tspan baseline-shift="sub" font-size="10">DD</tspan> = 3.3 V</text>
+                <line class="wire" x1="200" y1="130" x2="310" y2="130"/>
+                <text class="s" x="255" y="120" text-anchor="middle">0–3.3 V</text>
+
+                <!-- Op-amp -->
+                <polygon class="opamp" points="310,100 310,220 450,160"/>
+                <text class="big" x="320" y="136">+</text>
+                <text class="big" x="320" y="198">−</text>
+                <line class="wire" x1="380" y1="130" x2="380" y2="70"/>
+                <text class="b" x="390" y="82">+15 V</text>
+                <line class="wire" x1="380" y1="190" x2="380" y2="226"/>
+                <use href="#gnd" x="380" y="226"/>
+                <text class="s" x="300" y="258">U2: LM358 (one half)</text>
+
+                <!-- Feedback -->
+                <line class="wire" x1="450" y1="160" x2="480" y2="160"/>
+                <circle class="dot" cx="480" cy="160" r="3"/>
+                <polyline class="wire" points="480,160 480,285 426,285"/>
+                <polyline class="wire" points="426,285 420,278 412,292 404,278 396,292 388,278 380,285"/>
+                <polyline class="wire" points="380,285 270,285 270,190"/>
+                <circle class="dot" cx="270" cy="190" r="3"/>
+                <line class="wire" x1="270" y1="190" x2="310" y2="190"/>
+                <text class="s" x="403" y="312" text-anchor="middle">Rf = 18 kΩ + RV1 (5 kΩ trimmer)</text>
+
+                <!-- Rg -->
+                <polyline class="wire" points="270,190 240,190 240,205"/>
+                <polyline class="wire" points="240,205 233,211 247,219 233,227 247,235 233,243 240,251"/>
+                <line class="wire" x1="240" y1="251" x2="240" y2="262"/>
+                <use href="#gnd" x="240" y="262"/>
+                <text class="s" x="226" y="232" text-anchor="end">Rg = 10 kΩ</text>
+
+                <text class="s" x="495" y="214">G = 1 + Rf/Rg</text>
+                <text class="s" x="495" y="232">≈ 3.03</text>
+
+                <!-- Output stage -->
+                <line class="wire" x1="480" y1="160" x2="520" y2="160"/>
+                <polyline class="wire" points="520,160 526,153 534,167 542,153 550,167 558,153 566,160"/>
+                <text class="s" x="543" y="142" text-anchor="middle">R3 = 47 Ω</text>
+                <line class="wire" x1="566" y1="160" x2="740" y2="160"/>
+                <circle class="dot" cx="610" cy="160" r="3"/>
+                <circle class="dot" cx="670" cy="160" r="3"/>
+
+                <!-- TVS -->
+                <line class="wire" x1="610" y1="160" x2="610" y2="196"/>
+                <line class="wire" x1="602" y1="196" x2="618" y2="196"/>
+                <polygon class="wire" points="602,226 618,226 610,200"/>
+                <line class="wire" x1="610" y1="226" x2="610" y2="262"/>
+                <text class="s" x="624" y="214">D1 TVS</text>
+
+                <!-- C3 -->
+                <line class="wire" x1="670" y1="160" x2="670" y2="200"/>
+                <line class="wire" x1="660" y1="200" x2="680" y2="200"/>
+                <line class="wire" x1="660" y1="208" x2="680" y2="208"/>
+                <line class="wire" x1="670" y1="208" x2="670" y2="262"/>
+                <text class="s" x="686" y="212">C3 10 nF</text>
+                <text class="s" x="686" y="228">(optional)</text>
+
+                <!-- Ground bus and terminals -->
+                <polyline class="wire" points="610,262 745,262"/>
+                <circle class="dot" cx="670" cy="262" r="3"/>
+                <circle class="term" cx="745" cy="160" r="5"/>
+                <circle class="term" cx="745" cy="262" r="5"/>
+                <text class="b" x="745" y="143" text-anchor="middle">OUT</text>
+                <text class="s" x="702" y="148" text-anchor="middle">0–10 V</text>
+                <text class="b" x="745" y="284" text-anchor="middle">GND</text>
+              </svg>
+            </div>
+            <figcaption>Figure 2. Conceptual schematic of the analog stages. Not a verified design: decoupling capacitors, I²C pull-ups and the unused op-amp half are left off for clarity (see the component list). Proposed, not simulated or built.</figcaption>
+          </figure>
+
+          <div class="table-wrap">
+            <table class="wide">
+              <caption>Component list for the proposed baseline <span class="tag prop">Proposed</span>. Part values are starting points, not tested.</caption>
+              <thead>
+                <tr><th scope="col">Ref</th><th scope="col" class="num">Qty</th><th scope="col">Component</th><th scope="col">Purpose and notes</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">U1</th><td class="num">1</td><td>STM32F103C8T6 “Blue Pill” board</td><td>Generates the I²C commands. Check your board’s pinout and regulator<span class="c"><sup><a href="#r7">[7]</a></sup></span>.</td></tr>
+                <tr><th scope="row">U2</th><td class="num">1</td><td>MCP4725 12-bit I²C DAC (breakout board or SOT-23-6 adapter)</td><td>Converts the code to 0–3.3 V. Note the address variant (A0 or A1) of the part you buy<span class="c"><sup><a href="#r1">[1]</a></sup></span>.</td></tr>
+                <tr><th scope="row">U3</th><td class="num">1</td><td>LM358 dual op-amp, DIP-8</td><td>Gain stage; use one half. Wire the unused half as a follower with its + input at ground<span class="c"><sup><a href="#r5">[5]</a></sup></span>.</td></tr>
+                <tr><th scope="row">R1 (Rg)</th><td class="num">1</td><td>10 kΩ, 1 %, metal film</td><td>Lower leg of the gain divider.</td></tr>
+                <tr><th scope="row">R2 (Rf)</th><td class="num">1</td><td>18 kΩ, 1 %, metal film</td><td>Fixed part of the feedback resistor.</td></tr>
+                <tr><th scope="row">RV1</th><td class="num">1</td><td>5 kΩ multi-turn trimmer</td><td>In series with R2 to set full scale (gain 2.8–3.3) after measuring the real 3.3 V rail.</td></tr>
+                <tr><th scope="row">R3</th><td class="num">1</td><td>47 Ω, 0.25 W</td><td>Series output resistor. Load error is R3 / (R3 + R<sub>L</sub>).</td></tr>
+                <tr><th scope="row">D1</th><td class="num">1</td><td>Unidirectional TVS diode, voltage rating above 10 V plus margin</td><td>Clamps transients on the output. Exact part to be chosen and checked.</td></tr>
+                <tr><th scope="row">C1</th><td class="num">2</td><td>100 nF ceramic and 10 µF</td><td>DAC V<sub>DD</sub> decoupling, close to the pin<span class="c"><sup><a href="#r1">[1]</a></sup></span>.</td></tr>
+                <tr><th scope="row">C2</th><td class="num">2</td><td>100 nF ceramic and 10 µF</td><td>Op-amp supply decoupling.</td></tr>
+                <tr><th scope="row">C3</th><td class="num">1</td><td>10 nF ceramic (optional)</td><td>High-frequency noise filter at the output.</td></tr>
+                <tr><th scope="row">R4, R5</th><td class="num">2</td><td>4.7 kΩ pull-ups to 3.3 V</td><td>I²C SDA and SCL. Omit if the DAC breakout already has them.</td></tr>
+                <tr><th scope="row">PS1</th><td class="num">1</td><td>Regulated +15 V DC supply</td><td>Op-amp rail only. Current rating to be set from the expected load.</td></tr>
+                <tr><th scope="row">J1, J2</th><td class="num">2</td><td>2-way terminal blocks</td><td>Output (OUT, GND) and +15 V input.</td></tr>
+                <tr><th scope="row">—</th><td class="num">1</td><td>Breadboard or perfboard, jumper wires, digital multimeter</td><td>For the later build and measurement.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Illustrative firmware sketch</h3>
+          <p>This shows how the DAC code is sent and how a voltage maps to a code. It is a reading aid for the datasheet’s fast-mode write format<span class="c"><sup><a href="#r1">[1]</a></sup></span>. <span class="tag todo">Not done</span> It has not been compiled, run or tested on hardware.</p>
+<pre class="code"><code>/* Illustrative only. Not compiled or tested. */
+#define DAC_ADDR      (0x60 &lt;&lt; 1)  /* 7-bit 0x60: A0-variant part, A0 pin low. Check yours. */
+#define FULL_SCALE_V  10.0f        /* G x VDD, to be set by calibration */
+
+static void dac_write(uint16_t code)       /* code 0..4095 */
+{
+    uint8_t buf[2];
+    buf[0] = (uint8_t)((code &gt;&gt; 8) &amp; 0x0F); /* fast mode: C2=C1=0, PD1=PD0=0, D11..D8 */
+    buf[1] = (uint8_t)(code &amp; 0xFF);        /* D7..D0 */
+    HAL_I2C_Master_Transmit(&amp;hi2c1, DAC_ADDR, buf, 2, 10);
+}
+
+void set_output_volts(float v)
+{
+    float code = v / FULL_SCALE_V * 4096.0f;
+    if (code &lt; 0.0f)    code = 0.0f;
+    if (code &gt; 4095.0f) code = 4095.0f;     /* datasheet suggests 100..4000 for best linearity */
+    dac_write((uint16_t)(code + 0.5f));
+}</code></pre>
+        </section>
+
+        <!-- 6 -->
+        <section id="s6" aria-labelledby="s6-h">
+          <h2 id="s6-h"><span class="n">6</span>Advantages and limitations of the proposed circuit</h2>
+
+          <div class="two-col">
+            <div class="panel pro">
+              <h3>Advantages</h3>
+              <ul>
+                <li><strong>Simple.</strong> One DAC, one op-amp, a few passives; two signal wires from the MCU.</li>
+                <li><strong>Breadboard-friendly.</strong> The LM358 comes in DIP-8, and MCP4725 breakouts are common.</li>
+                <li><strong>No level shifting.</strong> The DAC runs at the MCU’s 3.3 V logic level<span class="c"><sup><a href="#r1">[1]</a></sup><sup><a href="#r7">[7]</a></sup></span>.</li>
+                <li><strong>Protected DAC.</strong> The op-amp buffers the DAC from the load, which the DAC alone could only drive down to about 5 kΩ<span class="c"><sup><a href="#r1">[1]</a></sup></span>.</li>
+                <li><strong>Calibratable.</strong> The trimmer sets full scale, and software can correct offset.</li>
+                <li><strong>Clear upgrade paths.</strong> OPA192, MCP4922, DAC8552 or DAC8760 can each address a specific weakness (section 4).</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <h3>Limitations</h3>
+              <ul>
+                <li><strong>Accuracy is far below 12 bits.</strong> See the error budget below.</li>
+                <li><strong>Reference is the 3.3 V rail.</strong> Its error and noise pass to the output, multiplied by the gain<span class="c"><sup><a href="#r1">[1]</a></sup></span>.</li>
+                <li><strong>Ends of the range are weakest.</strong> The datasheet advises codes 100–4000 for best gain accuracy<span class="c"><sup><a href="#r1">[1]</a></sup></span>, and a single-supply LM358 cannot reach exactly 0 V.</li>
+                <li><strong>Power-up value is mid-scale by default.</strong> The factory EEPROM setting gives half of V<sub>DD</sub> at start-up<span class="c"><sup><a href="#r1">[1]</a></sup></span>, which here is about 5 V at the output. The EEPROM must be programmed to code 0 before connecting real equipment, and normal writes should use fast mode.</li>
+                <li><strong>Needs an extra +15 V rail</strong> with the LM358.</li>
+                <li><strong>Voltage source only.</strong> It cannot sink current, so it does not suit 0–10 V lighting interfaces where the controller sinks current.</li>
+                <li><strong>Not isolated or fully field-protected.</strong> Behaviour when the +15 V rail is on and the DAC is unpowered is not characterised here; a high-value pull-down on the op-amp + input is a candidate fix to check in simulation.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="wide">
+              <caption>Estimated error budget at a 10 V output, from datasheet limits <span class="tag calc">Calculated</span></caption>
+              <thead>
+                <tr><th scope="col">Contribution</th><th scope="col">Limit used</th><th scope="col" class="num">Effect at 10 V</th><th scope="col">Can it be calibrated out?</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">DAC offset error<span class="c"><sup><a href="#r1">[1]</a></sup></span></th><td>0.75 % of full scale (max)</td><td class="num">≈ 75 mV</td><td>Largely, with a software offset</td></tr>
+                <tr><th scope="row">DAC gain error<span class="c"><sup><a href="#r1">[1]</a></sup></span></th><td>±2 % of full scale (max)</td><td class="num">≈ ±200 mV</td><td>Yes, at one point with RV1</td></tr>
+                <tr><th scope="row">DAC integral nonlinearity<span class="c"><sup><a href="#r1">[1]</a></sup></span></th><td>±14.5 LSB (max)</td><td class="num">≈ ±35 mV</td><td>No (curve shape)</td></tr>
+                <tr><th scope="row">3.3 V reference error</th><td>Depends on the supply used</td><td class="num">1 % ≈ 100 mV</td><td>At one temperature and supply only</td></tr>
+                <tr><th scope="row">Gain resistor tolerance</th><td>1 % each, worst case</td><td class="num">≈ 1.3 %, ≈ 130 mV</td><td>Yes, with RV1</td></tr>
+                <tr><th scope="row">Op-amp offset<span class="c"><sup><a href="#r5">[5]</a></sup></span></th><td>2 mV typ, multiplied by G</td><td class="num">≈ 6 mV</td><td>Part of the offset correction</td></tr>
+                <tr><th scope="row">Load drop across R3</th><td>R<sub>L</sub> = 10 kΩ</td><td class="num">≈ 47 mV</td><td>For a known load</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>These are worst-case limits, so typical parts should do better. If offset, gain and load are calibrated out, the DAC’s nonlinearity alone is ≈ 0.35 % of full scale in the worst case. Real accuracy is unknown until measured. The 2.44 mV step size is therefore much finer than the accuracy.</p>
+        </section>
+
+        <!-- 7 -->
+        <section id="s7" aria-labelledby="s7-h">
+          <h2 id="s7-h"><span class="n">7</span>Researched design vs. verified simulation</h2>
+          <div class="callout" role="note">
+            <p><strong>No simulation and no hardware test has been done for this circuit.</strong> The design above is researched from datasheets and checked by hand calculation only. Until the steps below are completed and recorded, treat every number here as expected, not achieved.</p>
+          </div>
+
+          <div class="table-wrap">
+            <table class="wide">
+              <caption>What kind of evidence supports each item</caption>
+              <thead>
+                <tr><th scope="col">Item</th><th scope="col">Evidence type</th><th scope="col">Status</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Device limits: supply ranges, logic thresholds, offset, gain error, INL, output swing</th><td><span class="tag ds">Datasheet</span></td><td>Researched. Cited in sources [1]–[8].</td></tr>
+                <tr><th scope="row">Code-to-voltage table, gain values, step size, error budget</th><td><span class="tag calc">Calculated</span></td><td>Researched. Hand arithmetic on datasheet values.</td></tr>
+                <tr><th scope="row">Circuit topology, resistor values, component list, firmware sketch</th><td><span class="tag prop">Proposed</span></td><td>Researched design. Unproven.</td></tr>
+                <tr><th scope="row">SPICE simulation of the op-amp stage</th><td><span class="tag todo">Not done</span></td><td>Not started.</td></tr>
+                <tr><th scope="row">Breadboard build and I²C bring-up</th><td><span class="tag todo">Not done</span></td><td>Not started.</td></tr>
+                <tr><th scope="row">Measured accuracy, linearity, 0 V and 10 V endpoints, load behaviour, power-up behaviour</th><td><span class="tag todo">Not done</span></td><td>Not started.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Planned verification (not yet performed)</h3>
+          <ol class="plain">
+            <li><strong>Simulate the analog stage.</strong> Use the op-amp manufacturer’s SPICE model and an ideal voltage source for the DAC. Check gain, output ceiling on 12 V and 15 V rails, behaviour near 0 V, a load step, and stability with cable capacitance. Also check the unpowered-DAC case from section 6.</li>
+            <li><strong>Build on a breadboard.</strong> Confirm the I²C address, then step through codes 0, 100, 1024, 2048, 3072, 4000 and 4095 while measuring the output with a multimeter. Test 10 kΩ and 2 kΩ loads and record the power-up value.</li>
+            <li><strong>Calibrate and record.</strong> Set full scale with RV1, fit an offset correction, and log error against code. Compare the results with the error budget in section 6.</li>
+          </ol>
+          <p>The team still needs to define pass/fail limits (accuracy, load, power-up value) before these tests. Results should go in a separate report so simulated and measured values stay distinguishable from the research here.</p>
+        </section>
+
+        <!-- Sources -->
+        <section id="refs" aria-labelledby="refs-h">
+          <h2 id="refs-h">Sources</h2>
+          <p>Values were taken from the documents below on 25 October 2026. The MCP4725 datasheet was read in full. For the other parts, values were read from manufacturer product pages and datasheet extracts. Several links are third-party copies of the manufacturer’s document, so confirm every value against the current official datasheet before purchasing.</p>
+          <ol class="refs">
+            <li id="r1">Microchip Technology, <em>MCP4725: 12-Bit Digital-to-Analog Converter with EEPROM Memory in SOT-23-6</em>, DS22039D, 2009.<br>
+              <a href="https://pdf.direnc.net/upload/mcp4725a1t-e-ch-12-bit-smd-dijital-analog-cevirici-entegresi-sot23-6-datasheet.pdf" rel="noopener">pdf.direnc.net copy of DS22039D</a>
+              <span class="note">Third-party copy of Microchip’s datasheet; check microchip.com for the latest revision.</span></li>
+            <li id="r2">Microchip Technology, <em>MCP4902/4912/4922: 8/10/12-Bit Dual Voltage Output DAC with SPI Interface</em>, DS22250A, 2010.<br>
+              <a href="https://www.cp.eng.chula.ac.th/~prabhas/teaching/embed/2020/22250a.pdf" rel="noopener">cp.eng.chula.ac.th copy of DS22250A</a>
+              <span class="note">Third-party copy; check microchip.com for the latest revision.</span></li>
+            <li id="r3">Texas Instruments, <em>DAC8552: 16-Bit, Dual Channel, Ultralow Glitch Voltage Output DAC</em>, SLAS430A, 2006.<br>
+              <a href="https://www.ti.com/product/DAC8552" rel="noopener">Product page</a> · <a href="https://www.ti.com/lit/gpn/dac8552" rel="noopener">Datasheet</a>
+              <span class="note">TI lists newer alternatives (DAC8562, DAC80502) on the product page.</span></li>
+            <li id="r4">Texas Instruments, <em>DACx760: Single-Channel, 12- and 16-Bit Programmable Current and Voltage Output DACs</em>, SBAS528.<br>
+              <a href="https://www.ti.com/product/DAC8760/part-details/DAC8760IRHAT" rel="noopener">Product page</a> · <a href="https://www.ti.com/lit/gpn/dac8760" rel="noopener">Datasheet</a>
+              <span class="note">The 0–10 V range’s supply requirement was read from an earlier datasheet revision; verify it in the current one.</span></li>
+            <li id="r5">Texas Instruments, <em>LM358-N / LMx58-N: Low-Power, Dual Operational Amplifiers</em>.<br>
+              <a href="https://www.ti.com/product/LM358-N" rel="noopener">Product page</a></li>
+            <li id="r6">Texas Instruments, <em>OPAx192: 36-V, Precision, Rail-to-Rail Input/Output, Low Offset Voltage Op Amp with e-trim</em>, SBOS620.<br>
+              <a href="https://www.ti.com/product/opa192" rel="noopener">Product page</a> · <a href="https://ti.com/document-viewer/OPA192/datasheet" rel="noopener">Datasheet</a></li>
+            <li id="r7">STMicroelectronics, <em>STM32F103x8, STM32F103xB datasheet</em>, DS5319 (Rev. 20).<br>
+              <a href="https://www.st.com/en/product/stm32f103c8.html" rel="noopener">STM32F103C8 product page</a> (datasheet download)</li>
+            <li id="r8">Diodes Incorporated, <em>LM358: Low Power Dual Operational Amplifiers</em>, DS35167.<br>
+              <a href="https://www.electronicsdatasheets.com/download/19710.pdf?format=pdf" rel="noopener">electronicsdatasheets.com copy</a>
+              <span class="note">Used only for the general output-swing statement; third-party copy.</span></li>
+          </ol>
+        </section>
+
+      </main>
+    </div>
+
+    <footer>
+      <p><strong>NIDAR 2.0 Hardware Team</strong> · Task 2: Researching an MCU-Controlled 0–10 V Analog Output Circuit · Draft 1.0 · 25 October 2026</p>
+      <p>Researched design only. No simulation or hardware testing has been performed. Figures are from datasheets or hand calculation and must be verified before use.</p>
+    </footer>
+  </article>
+</div>
+</body>
+</html>

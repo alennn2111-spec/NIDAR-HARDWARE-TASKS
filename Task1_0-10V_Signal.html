@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Understanding 0–10 V Analog Signal Output | NIDAR 2.0 Hardware Team</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --canvas: #EDF1F4;
+    --paper: #FFFFFF;
+    --ink: #122130;
+    --steel: #4C5F70;
+    --rule: #CCD6DE;
+    --tint: #F4F7F9;
+    --signal: #0A62B0;
+    --signal-ink: #FFFFFF;
+    --signal-soft: #E4F0FA;
+    --note-bg: #FFF6DC;
+    --note-ink: #5C4100;
+    --note-rule: #E3C56B;
+
+    --sans: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+    color-scheme: light dark;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --canvas: #0E151C;
+      --paper: #16202A;
+      --ink: #E6EDF3;
+      --steel: #9DB0C0;
+      --rule: #2C3B49;
+      --tint: #1B2733;
+      --signal: #6DB3F2;
+      --signal-ink: #0B1822;
+      --signal-soft: #1A2E41;
+      --note-bg: #2B2412;
+      --note-ink: #F0DCA0;
+      --note-rule: #6B5A25;
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; scroll-padding-top: 1.25rem; }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 1.0625rem;
+    line-height: 1.7;
+  }
+
+  a { color: var(--signal); text-underline-offset: 0.18em; }
+  a:focus-visible, summary:focus-visible {
+    outline: 3px solid var(--signal);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  .skip {
+    position: absolute; left: 0.75rem; top: -4rem;
+    background: var(--signal); color: var(--signal-ink);
+    padding: 0.5rem 0.9rem; font-family: var(--sans); z-index: 10;
+  }
+  .skip:focus { top: 0.75rem; }
+
+  /* ---------- Page frame ---------- */
+  .page {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: clamp(0.75rem, 3vw, 2.5rem);
+  }
+  .sheet {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+  }
+
+  /* ---------- Report header ---------- */
+  .masthead {
+    padding: clamp(1.25rem, 4vw, 3rem) clamp(1.25rem, 4vw, 3rem) 0;
+  }
+  .org {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--steel);
+    margin: 0 0 1.25rem;
+    letter-spacing: 0.01em;
+  }
+  .org b { color: var(--signal); font-weight: 700; }
+
+  h1 {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: clamp(2rem, 5.6vw, 3.4rem);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    margin: 0 0 0.5rem;
+    max-width: 18ch;
+  }
+  .subtitle {
+    font-family: var(--sans);
+    font-size: clamp(1rem, 2.2vw, 1.2rem);
+    color: var(--steel);
+    margin: 0 0 2rem;
+    max-width: 52ch;
+  }
+
+  /* Voltage ruler: the one distinctive element */
+  .ruler {
+    position: relative;
+    margin: 0 14px 2.25rem;
+    height: 2.4rem;
+    color: var(--steel);
+  }
+  .ruler::before {
+    content: "";
+    position: absolute; left: 0; right: 0; top: 0;
+    height: 4px; background: var(--signal);
+  }
+  .ticks { display: flex; height: 100%; }
+  .ticks span {
+    flex: 1 1 0;
+    position: relative;
+    border-left: 1px solid currentColor;
+    height: 14px;
+    margin-top: 4px;
+  }
+  .ticks span::after {
+    content: "";
+    position: absolute; left: 50%; top: 0;
+    height: 7px; border-left: 1px solid currentColor;
+  }
+  .ticks span.end { flex: 0 0 0; width: 0; }
+  .ticks span.end::after { display: none; }
+  .ticks i {
+    position: absolute; top: 20px; left: 0;
+    transform: translateX(-50%);
+    font-style: normal;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 0;
+    margin: 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--sans);
+  }
+  .meta div {
+    padding: 0.85rem 1rem 0.85rem 0;
+  }
+  .meta dt { font-size: 0.82rem; color: var(--steel); margin: 0 0 0.15rem; }
+  .meta dd { margin: 0; font-weight: 500; font-size: 0.96rem; }
+
+  /* ---------- Layout ---------- */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding: 0 clamp(1.25rem, 4vw, 3rem) clamp(1.5rem, 4vw, 3rem);
+  }
+
+  nav.toc {
+    font-family: var(--sans);
+    font-size: 0.93rem;
+    margin: 1.5rem 0 0.5rem;
+    padding: 1rem 1.1rem;
+    background: var(--tint);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+  }
+  nav.toc p { margin: 0 0 0.4rem; font-weight: 600; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.15rem; }
+  nav.toc a { display: block; padding: 0.3rem 0; text-decoration: none; color: var(--ink); }
+  nav.toc a:hover { color: var(--signal); text-decoration: underline; }
+  nav.toc .n { color: var(--steel); display: inline-block; min-width: 1.6rem; }
+
+  @media (min-width: 1000px) {
+    .layout { grid-template-columns: 220px minmax(0, 1fr); column-gap: clamp(2rem, 4vw, 3.5rem); }
+    nav.toc {
+      position: sticky; top: 1.25rem; align-self: start;
+      background: none; border: 0; border-left: 2px solid var(--rule);
+      border-radius: 0; padding: 0.2rem 0 0.2rem 1rem; margin-top: 2rem;
+    }
+  }
+
+  main { min-width: 0; }
+
+  /* ---------- Content ---------- */
+  section { padding-top: 2.25rem; }
+  section + section { border-top: 1px solid var(--rule); margin-top: 2.25rem; }
+
+  h2 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: clamp(1.4rem, 3.2vw, 1.8rem);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    margin: 0 0 1rem;
+    display: flex; gap: 0.7rem; align-items: baseline;
+  }
+  h2 .n { color: var(--signal); font-weight: 600; flex: none; }
+  h3 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 1.08rem;
+    margin: 1.75rem 0 0.4rem;
+  }
+
+  p { margin: 0 0 1rem; max-width: 68ch; }
+  ul, ol.plain { margin: 0 0 1.1rem; padding-left: 1.3rem; max-width: 68ch; }
+  li { margin-bottom: 0.4rem; }
+  li::marker { color: var(--steel); }
+  strong { font-weight: 600; }
+
+  code, .formula {
+    font-family: var(--mono);
+    font-size: 0.9em;
+  }
+  code { background: var(--tint); border: 1px solid var(--rule); padding: 0.05em 0.35em; border-radius: 3px; }
+
+  .formula {
+    display: block;
+    margin: 0.25rem 0 1.15rem;
+    padding: 0.85rem 1rem;
+    background: var(--signal-soft);
+    border-left: 4px solid var(--signal);
+    overflow-x: auto;
+    max-width: 68ch;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+
+  .callout {
+    font-family: var(--sans);
+    font-size: 0.97rem;
+    line-height: 1.6;
+    padding: 1rem 1.15rem;
+    margin: 1.5rem 0;
+    background: var(--note-bg);
+    color: var(--note-ink);
+    border: 1px solid var(--note-rule);
+    border-left-width: 5px;
+    border-radius: 3px;
+    max-width: 68ch;
+  }
+  .callout p { margin: 0; font-size: inherit; }
+  .callout strong { font-weight: 700; }
+
+  .summary {
+    font-family: var(--sans);
+    font-size: 1.05rem;
+    line-height: 1.6;
+    margin: 2rem 0 0;
+    padding: 1.1rem 1.25rem;
+    background: var(--signal-soft);
+    border-radius: 4px;
+    max-width: 68ch;
+  }
+  .summary p { margin: 0; }
+  .summary strong { color: var(--signal); }
+
+  /* Tables */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 0.5rem 0 1.5rem;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: var(--sans);
+    font-size: 0.93rem;
+    line-height: 1.45;
+    min-width: 480px;
+  }
+  caption {
+    text-align: left;
+    padding: 0.65rem 0.9rem;
+    font-weight: 600;
+    background: var(--tint);
+    border-bottom: 1px solid var(--rule);
+  }
+  th, td { text-align: left; padding: 0.6rem 0.9rem; vertical-align: top; }
+  thead th { border-bottom: 2px solid var(--rule); font-weight: 600; background: var(--paper); }
+  tbody th { font-weight: 600; }
+  tbody tr + tr > * { border-top: 1px solid var(--rule); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.tbd { color: var(--steel); font-style: italic; }
+
+  /* Figures */
+  figure { margin: 1.5rem 0; }
+  figcaption {
+    font-family: var(--sans);
+    font-size: 0.88rem;
+    color: var(--steel);
+    margin-top: 0.6rem;
+    max-width: 68ch;
+  }
+
+  .plot { width: 100%; max-width: 460px; height: auto; display: block; }
+  .plot .grid { stroke: var(--rule); stroke-width: 1; }
+  .plot .axis { stroke: var(--steel); stroke-width: 1.5; }
+  .plot .line { stroke: var(--signal); stroke-width: 3; fill: none; stroke-linecap: round; }
+  .plot .dot { fill: var(--signal); }
+  .plot text { fill: var(--steel); font-family: var(--sans); font-size: 11px; }
+  .plot text.title { fill: var(--ink); font-weight: 600; }
+
+  /* Block diagram */
+  .diagram-wrap { container-type: inline-size; }
+  .chain {
+    list-style: none; margin: 0; padding: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    font-family: var(--sans);
+    max-width: none;
+  }
+  .chain > li { margin: 0; }
+  .node {
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    padding: 0.9rem 1rem;
+    background: var(--paper);
+    text-align: center;
+  }
+  .node h3 { margin: 0 0 0.15rem; font-size: 1.1rem; }
+  .node .role { margin: 0 0 0.45rem; font-size: 0.85rem; color: var(--steel); }
+  .node .does { margin: 0; font-size: 0.86rem; line-height: 1.4; max-width: none; }
+  .node.out {
+    background: var(--signal);
+    border-color: var(--signal);
+    color: var(--signal-ink);
+  }
+  .node.out .role { color: inherit; opacity: 0.85; }
+
+  .link {
+    display: flex; flex-direction: row; align-items: center; justify-content: center;
+    gap: 0.75rem;
+    padding: 0.35rem 0;
+    font-size: 0.8rem; line-height: 1.3; color: var(--steel);
+    text-align: left;
+  }
+  .link svg { flex: none; stroke: var(--ink); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .link .h { display: none; }
+  .link .v { width: 14px; height: 38px; }
+  .link b { color: var(--ink); font-weight: 600; display: block; }
+
+  @container (min-width: 720px) {
+    .chain { grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr; align-items: center; }
+    .node { height: 100%; display: flex; flex-direction: column; justify-content: center; }
+    .link { flex-direction: column; gap: 0.3rem; padding: 0 0.6rem; text-align: center; min-width: 6.5rem; }
+    .link .v { display: none; }
+    .link .h { display: block; width: 48px; height: 12px; }
+  }
+
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+    font-family: var(--sans);
+    font-size: 0.93rem;
+  }
+  .legend div { border-top: 3px solid var(--rule); padding-top: 0.5rem; }
+  .legend div:nth-child(4) { border-top-color: var(--signal); }
+  .legend h3 { margin: 0 0 0.2rem; font-size: 0.98rem; }
+  .legend p { margin: 0; font-size: inherit; line-height: 1.5; max-width: none; }
+
+  .two-col {
+    display: grid; gap: 1.25rem 2.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+  .two-col > * { min-width: 0; }
+
+  footer {
+    padding: 1.25rem clamp(1.25rem, 4vw, 3rem) 1.75rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    color: var(--steel);
+  }
+  footer p { margin: 0 0 0.3rem; max-width: none; }
+
+  @media (max-width: 520px) {
+    body { font-size: 1rem; }
+    .ticks i { font-size: 0.62rem; }
+    .ticks span:nth-child(even) i { display: none; }
+  }
+
+  @media print {
+    body { background: #fff; color: #000; font-size: 10.5pt; }
+    .page { padding: 0; max-width: none; }
+    .sheet { border: 0; }
+    nav.toc, .skip { display: none; }
+    .layout { display: block; }
+    section { break-inside: avoid-page; }
+    .table-wrap, figure, .callout { break-inside: avoid; }
+    a { color: inherit; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#content">Skip to report</a>
+
+<div class="page">
+  <article class="sheet">
+
+    <header class="masthead">
+      <p class="org"><b>NIDAR 2.0</b> Hardware Team</p>
+      <h1>Understanding 0–10 V Analog Signal Output</h1>
+      <p class="subtitle">Task 1 report: what the signal is, where it is used, and how an STM32 with an external DAC can produce it.</p>
+
+      <div class="ruler" aria-hidden="true">
+        <div class="ticks">
+          <span><i>0</i></span><span><i>1</i></span><span><i>2</i></span><span><i>3</i></span><span><i>4</i></span><span><i>5</i></span><span><i>6</i></span><span><i>7</i></span><span><i>8</i></span><span><i>9</i></span><span class="end"><i>10 V</i></span>
+        </div>
+      </div>
+
+      <dl class="meta">
+        <div><dt>Project</dt><dd>NIDAR 2.0 Hardware Team</dd></div>
+        <div><dt>Task</dt><dd>Task 1: 0–10 V signal study</dd></div>
+        <div><dt>Report type</dt><dd>Theory and design study</dd></div>
+        <div><dt>Date</dt><dd>25 October 2026</dd></div>
+        <div><dt>Status</dt><dd>Draft 1.0, not yet reviewed</dd></div>
+      </dl>
+    </header>
+
+    <div class="layout">
+      <nav class="toc" aria-label="Report contents">
+        <p>Contents</p>
+        <ol>
+          <li><a href="#s1"><span class="n">1</span>What the signal is</a></li>
+          <li><a href="#s2"><span class="n">2</span>Range and behavior</a></li>
+          <li><a href="#s3"><span class="n">3</span>Industrial applications</a></li>
+          <li><a href="#s4"><span class="n">4</span>STM32 + external DAC</a></li>
+          <li><a href="#s5"><span class="n">5</span>Requirements and objective</a></li>
+          <li><a href="#s6"><span class="n">6</span>Block diagram</a></li>
+        </ol>
+      </nav>
+
+      <main id="content">
+
+        <div class="callout" role="note">
+          <p><strong>Scope of this report.</strong> This is a literature and design study. No hardware has been built, tested or measured. All numbers are ideal calculations or typical industry figures, and must be checked against the datasheets of the parts the team selects.</p>
+        </div>
+
+        <div class="summary">
+          <p><strong>Summary.</strong> A 0–10 V signal is a DC voltage that represents a value, for example a speed or position command, on a straight line from 0 V (minimum) to 10 V (maximum). An STM32 cannot produce 10 V directly. The proposed chain is: the STM32 sends a digital code to an external DAC, and an op-amp stage scales and protects the DAC output to give 0–10 V.</p>
+        </div>
+
+        <!-- 1 -->
+        <section id="s1" aria-labelledby="h1">
+          <h2 id="h1"><span class="n">1</span>What a 0–10 V analog signal is</h2>
+          <p>A 0–10 V signal is a widely used industrial control signal. The DC voltage between two conductors, the signal wire and its common (ground) return, carries one value such as a setpoint, a command or a sensor reading. Because the voltage can take any value in the range, the signal is called analog.</p>
+          <p>The mapping from value to voltage is linear. The bottom of the range is 0 V and the top is 10 V:</p>
+          <span class="formula">V = 10 V × (value − min) / (max − min)</span>
+          <p>As an example, a motor drive set up to run from 0 Hz to 50 Hz over its analog input would run at 25 Hz when it receives 5 V. The scaling lives in the receiving device, so the output side only needs to deliver the correct voltage.</p>
+          <p>It is a <strong>voltage-mode</strong> signal. The sender holds a voltage and the receiver reads it with a high-impedance input, so almost no current flows. This is what separates it from the 4–20 mA current loop, which is covered in the next section.</p>
+        </section>
+
+        <!-- 2 -->
+        <section id="s2" aria-labelledby="h2">
+          <h2 id="h2"><span class="n">2</span>Voltage range and signal behavior</h2>
+
+          <div class="two-col">
+            <div>
+              <p>The nominal range is <strong>0 V to 10 V DC</strong>. The output follows the commanded value in proportion, so the graph is a straight line from the origin.</p>
+              <ul>
+                <li><strong>Proportional.</strong> 2.5 V is 25 %, 5 V is 50 %, 10 V is 100 %.</li>
+                <li><strong>Single-ended.</strong> The voltage is measured against a common return, so sender and receiver must share a reference.</li>
+                <li><strong>Continuous in theory, stepped in practice.</strong> A DAC produces discrete steps, and the step size depends on its resolution (see section 4).</li>
+              </ul>
+            </div>
+            <figure>
+              <svg class="plot" viewBox="0 0 360 230" role="img" aria-labelledby="plot-t plot-d">
+                <title id="plot-t">Ideal transfer function of a 0–10 V signal</title>
+                <desc id="plot-d">A straight line rising from 0 volts at 0 percent of range to 10 volts at 100 percent of range.</desc>
+                <text class="title" x="50" y="14">Output voltage vs. commanded value</text>
+                <g class="grid">
+                  <line x1="50" y1="180" x2="330" y2="180"/>
+                  <line x1="50" y1="135" x2="330" y2="135"/>
+                  <line x1="50" y1="90" x2="330" y2="90"/>
+                  <line x1="50" y1="45" x2="330" y2="45"/>
+                  <line x1="50" y1="30" x2="330" y2="30"/>
+                  <line x1="120" y1="30" x2="120" y2="180"/>
+                  <line x1="190" y1="30" x2="190" y2="180"/>
+                  <line x1="260" y1="30" x2="260" y2="180"/>
+                  <line x1="330" y1="30" x2="330" y2="180"/>
+                </g>
+                <line class="axis" x1="50" y1="30" x2="50" y2="180"/>
+                <line class="axis" x1="50" y1="180" x2="330" y2="180"/>
+                <line class="line" x1="50" y1="180" x2="330" y2="30"/>
+                <circle class="dot" cx="190" cy="105" r="4.5"/>
+                <text x="198" y="124">50 % = 5 V</text>
+                <g text-anchor="end">
+                  <text x="44" y="184">0 V</text>
+                  <text x="44" y="139">2.5</text>
+                  <text x="44" y="94">5</text>
+                  <text x="44" y="49">7.5</text>
+                  <text x="44" y="34">10 V</text>
+                </g>
+                <g text-anchor="middle">
+                  <text x="50" y="197">0 %</text>
+                  <text x="120" y="197">25 %</text>
+                  <text x="190" y="197">50 %</text>
+                  <text x="260" y="197">75 %</text>
+                  <text x="330" y="197">100 %</text>
+                  <text x="190" y="218">Commanded value (% of range)</text>
+                </g>
+              </svg>
+              <figcaption>Figure 1. Ideal transfer function. Real outputs deviate by offset, gain and linearity errors.</figcaption>
+            </figure>
+          </div>
+
+          <h3>Practical limits to design for</h3>
+          <ul>
+            <li><strong>Load current.</strong> Receiving inputs are commonly in the range of several kΩ to 100 kΩ or more, but this varies by product. At 10 V, a 10 kΩ input draws 1 mA, so the output stage must be able to source the load current of the lowest-impedance input it will serve.</li>
+            <li><strong>Noise and cable length.</strong> Voltage signals pick up interference and suffer ground offsets, so they suit short runs and are normally wired with shielded twisted pair.</li>
+            <li><strong>No live zero.</strong> A reading of 0 V can mean a valid minimum or a broken wire, a failed source or lost power. The receiver cannot tell which.</li>
+            <li><strong>Overrange.</strong> Some receivers accept a small margin above 10 V and others do not. Treat 10 V as a hard ceiling unless the receiving device states otherwise.</li>
+          </ul>
+
+          <div class="table-wrap">
+            <table>
+              <caption>Voltage signal compared with the 4–20 mA current loop</caption>
+              <thead>
+                <tr><th scope="col">Property</th><th scope="col">0–10 V</th><th scope="col">4–20 mA</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Signal type</th><td>Voltage</td><td>Current</td></tr>
+                <tr><th scope="row">Typical cable run</th><td>Short</td><td>Long</td></tr>
+                <tr><th scope="row">Noise and voltage-drop immunity</th><td>Lower</td><td>Higher</td></tr>
+                <tr><th scope="row">Wire-break detection</th><td>Not possible from the signal alone</td><td>Possible, because 4 mA is the live zero</td></tr>
+                <tr><th scope="row">Source circuit</th><td>Simple voltage output</td><td>Needs a current driver</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 3 -->
+        <section id="s3" aria-labelledby="h3">
+          <h2 id="h3"><span class="n">3</span>Common applications in industrial control</h2>
+          <p>The signal is common where a controller sends a command to a nearby device, or a transmitter reports a value to a local controller.</p>
+          <ul>
+            <li><strong>Variable-frequency drives and motor controllers.</strong> A 0–10 V input is a standard way to set speed. Many EC fans accept it as well.</li>
+            <li><strong>HVAC.</strong> Damper and valve actuators, and fan or pump speed control, are often positioned by a 0–10 V command.</li>
+            <li><strong>Lighting control.</strong> 0–10 V dimming is a common interface for LED drivers and ballasts. These typically work by sinking a small current rather than receiving a driven voltage, so the interface needs checking against the driver datasheet.</li>
+            <li><strong>PLC and DCS analog I/O.</strong> Analog input and output modules commonly offer 0–10 V as a selectable range.</li>
+            <li><strong>Process transmitters.</strong> Pressure, temperature, level and flow sensors often have a 0–10 V output option.</li>
+            <li><strong>Power controllers.</strong> Heater and SCR power controllers can take a 0–10 V reference to set output power.</li>
+          </ul>
+          <p>In each case the receiver is expected to treat 0 V as the lowest value and 10 V as the highest. Our hardware therefore has to be accurate at both ends of the range.</p>
+        </section>
+
+        <!-- 4 -->
+        <section id="s4" aria-labelledby="h4">
+          <h2 id="h4"><span class="n">4</span>How STM32 + an external DAC can generate the signal</h2>
+          <p>An STM32 works from a 3.3 V supply, so its pins and its internal DAC (on the variants that have one) cannot go above that level. The internal DAC is also limited in drive capability. Generating 0–10 V needs a DAC and an amplifier stage, and an external DAC is attractive because it offers higher resolution options, a dedicated reference voltage and multiple channels.</p>
+
+          <h3>Signal chain, step by step</h3>
+          <ol class="plain">
+            <li><strong>Firmware computes a code.</strong> For an N-bit DAC, the code for a target voltage is below.</li>
+          </ol>
+          <span class="formula">code = round( V_target / 10 V × 2^N ),  limited to 2^N − 1</span>
+          <ol class="plain" start="2">
+            <li><strong>STM32 sends the code to the DAC</strong> over SPI or I²C. Check that the DAC's logic input levels accept 3.3 V signals.</li>
+            <li><strong>DAC outputs 0 to V<sub>REF</sub>.</strong> The ideal output is V<sub>REF</sub> × code / 2<sup>N</sup>. The reference voltage sets accuracy and stability.</li>
+            <li><strong>Signal conditioning scales it to 0–10 V.</strong> A non-inverting op-amp stage supplies the gain.</li>
+          </ol>
+          <span class="formula">G = 10 V / V_REF  =  1 + R_f / R_g</span>
+
+          <div class="table-wrap">
+            <table>
+              <caption>Gain needed for common DAC full-scale voltages</caption>
+              <thead>
+                <tr><th scope="col">DAC full scale (V<sub>REF</sub>)</th><th scope="col" class="num">Required gain</th><th scope="col">Resistor ratio R<sub>f</sub> / R<sub>g</sub></th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">2.5 V</th><td class="num">4.00</td><td>3.00</td></tr>
+                <tr><th scope="row">3.3 V</th><td class="num">3.03</td><td>2.03</td></tr>
+                <tr><th scope="row">5.0 V</th><td class="num">2.00</td><td>1.00</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Resolution</h3>
+          <p>With the gain set so that full scale is 10 V, one step (LSB) at the output is 10 V / 2<sup>N</sup>. The top code gives one LSB below 10 V, because a DAC reaches V<sub>REF</sub> only in the limit. Whether to trim the gain slightly to reach exactly 10 V is a decision for the design stage.</p>
+
+          <div class="table-wrap">
+            <table>
+              <caption>Ideal step size at the 0–10 V output</caption>
+              <thead>
+                <tr><th scope="col" class="num">DAC resolution</th><th scope="col" class="num">Steps</th><th scope="col" class="num">Step size</th><th scope="col" class="num">Top code output</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="num">10-bit</td><td class="num">1,024</td><td class="num">9.77 mV</td><td class="num">9.990 V</td></tr>
+                <tr><td class="num">12-bit</td><td class="num">4,096</td><td class="num">2.44 mV</td><td class="num">9.998 V</td></tr>
+                <tr><td class="num">14-bit</td><td class="num">16,384</td><td class="num">0.61 mV</td><td class="num">9.9994 V</td></tr>
+                <tr><td class="num">16-bit</td><td class="num">65,536</td><td class="num">0.153 mV</td><td class="num">9.9998 V</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Step size is only the resolution. Absolute accuracy also depends on reference error, op-amp offset, resistor tolerance and DAC linearity. These need to be taken from datasheets and, later, from measurement.</p>
+
+          <h3>Signal conditioning design points</h3>
+          <ul>
+            <li><strong>Supply headroom.</strong> The op-amp must be powered from a rail comfortably above 10 V, for example 12 V, 15 V or a 24 V field supply, so that its output can reach 10 V under load.</li>
+            <li><strong>Reaching 0 V.</strong> A single-supply op-amp output cannot reach exactly 0 V. Options are a rail-to-rail output part that swings within millivolts of ground, or a small negative supply. This determines how accurately the bottom of the range can be reproduced.</li>
+            <li><strong>Drive and stability.</strong> The stage must source the expected load current and stay stable with cable capacitance, usually by adding a small series output resistor.</li>
+            <li><strong>Protection.</strong> Clamp or TVS devices and an RC filter protect the output against ESD, miswiring and noise. Isolation is optional and depends on the system grounding.</li>
+          </ul>
+
+          <h3>Candidate parts to evaluate</h3>
+          <p>None of these has been selected. DAC examples include the MCP4725 (12-bit, I²C), MCP4922 (dual 12-bit, SPI) and DAC8552 (dual 16-bit, SPI). Integrated industrial output DACs, such as the TI DAC8760 family, offer voltage-output ranges with the output stage built in. This could replace the discrete op-amp stage at a higher part cost. Verify every part against its current datasheet before use.</p>
+        </section>
+
+        <!-- 5 -->
+        <section id="s5" aria-labelledby="h5">
+          <h2 id="h5"><span class="n">5</span>Required output range and project objective</h2>
+
+          <div class="table-wrap">
+            <table>
+              <caption>Output requirements. Items marked "To be defined" are open decisions for the team.</caption>
+              <thead>
+                <tr><th scope="col">Parameter</th><th scope="col">Requirement</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Output signal</th><td>0–10 V DC, single-ended, referenced to signal ground</td></tr>
+                <tr><th scope="row">Mapping</th><td>Minimum code gives 0 V, maximum code gives the full-scale 10 V end of the range</td></tr>
+                <tr><th scope="row">Signal source</th><td>STM32 microcontroller driving an external DAC</td></tr>
+                <tr><th scope="row">DAC part and resolution</th><td class="tbd">To be defined</td></tr>
+                <tr><th scope="row">Accuracy target</th><td class="tbd">To be defined</td></tr>
+                <tr><th scope="row">Load (receiving input impedance)</th><td class="tbd">To be defined with the receiving device</td></tr>
+                <tr><th scope="row">Update rate and output protection</th><td class="tbd">To be defined</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Objective</h3>
+          <p>The objective of the NIDAR 2.0 hardware effort for this signal is to generate a stable, controllable 0–10 V analog output from an STM32 using an external DAC and a signal-conditioning stage. Task 1 establishes the shared understanding and the proposed signal chain.</p>
+
+          <h3>Proposed next steps</h3>
+          <ul>
+            <li>Confirm the receiving device and its input impedance and accuracy needs.</li>
+            <li>Choose the DAC resolution, reference and interface (SPI or I²C).</li>
+            <li>Design and simulate the op-amp stage, including 0 V behavior and load drive.</li>
+            <li>Write STM32 firmware that maps a requested value to a DAC code.</li>
+            <li>Build a prototype and verify the output range and accuracy by measurement. This step has not been done.</li>
+          </ul>
+        </section>
+
+        <!-- 6 -->
+        <section id="s6" aria-labelledby="h6">
+          <h2 id="h6"><span class="n">6</span>Block diagram</h2>
+          <p>The proposed signal chain has four stages. Digital data enters at the left, and the finished 0–10 V analog signal leaves at the right.</p>
+
+          <figure class="diagram-wrap">
+            <ol class="chain">
+              <li class="node">
+                <h3>STM32</h3>
+                <p class="role">Microcontroller</p>
+                <p class="does">Computes the output code from the requested value</p>
+              </li>
+              <li class="link">
+                <svg class="v" viewBox="0 0 14 38" aria-hidden="true"><path d="M7 2v32M2 28l5 7 5-7"/></svg>
+                <svg class="h" viewBox="0 0 48 12" aria-hidden="true"><path d="M2 6h40M36 1l7 5-7 5"/></svg>
+                <span><b>SPI or I²C</b>digital code</span>
+              </li>
+              <li class="node">
+                <h3>DAC</h3>
+                <p class="role">External converter</p>
+                <p class="does">Turns the code into a voltage from 0 to V<sub>REF</sub></p>
+              </li>
+              <li class="link">
+                <svg class="v" viewBox="0 0 14 38" aria-hidden="true"><path d="M7 2v32M2 28l5 7 5-7"/></svg>
+                <svg class="h" viewBox="0 0 48 12" aria-hidden="true"><path d="M2 6h40M36 1l7 5-7 5"/></svg>
+                <span><b>0 to V<sub>REF</sub></b>low-level analog</span>
+              </li>
+              <li class="node">
+                <h3>Signal Conditioning</h3>
+                <p class="role">Gain and protection</p>
+                <p class="does">Op-amp gain scales to 10 V and drives the load; clamps protect the output</p>
+              </li>
+              <li class="link">
+                <svg class="v" viewBox="0 0 14 38" aria-hidden="true"><path d="M7 2v32M2 28l5 7 5-7"/></svg>
+                <svg class="h" viewBox="0 0 48 12" aria-hidden="true"><path d="M2 6h40M36 1l7 5-7 5"/></svg>
+                <span><b>0 to 10 V</b>buffered analog</span>
+              </li>
+              <li class="node out">
+                <h3>0–10 V Output</h3>
+                <p class="role">Field-side signal</p>
+                <p class="does">Connects to the receiving controller, drive or actuator input</p>
+              </li>
+            </ol>
+            <figcaption>Figure 2. Signal chain: STM32 → DAC → Signal Conditioning → 0–10 V Output. Proposed architecture only; component values are not yet chosen.</figcaption>
+          </figure>
+
+          <div class="legend">
+            <div><h3>STM32</h3><p>Holds the requested value and sends it to the DAC as a digital word.</p></div>
+            <div><h3>DAC</h3><p>Sets the resolution and linearity. Its reference voltage sets accuracy and stability.</p></div>
+            <div><h3>Signal Conditioning</h3><p>Provides gain, load drive and protection. Decides whether 0 V and 10 V are reached cleanly.</p></div>
+            <div><h3>0–10 V Output</h3><p>The signal delivered to the external device, wired with a signal common return.</p></div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+    <footer>
+      <p><strong>NIDAR 2.0 Hardware Team</strong> · Task 1: Understanding 0–10 V Analog Signal Output · Draft 1.0 · 25 October 2026</p>
+      <p>Theory and design study only. No hardware testing was performed. Figures are ideal or typical values and must be verified against component datasheets.</p>
+    </footer>
+  </article>
+</div>
+</body>
+</html>
