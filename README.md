@@ -1,100 +1,89 @@
-# NIDAR – 0–10V Analog Signal Generation System
+# NIDAR 0–10V Analog Signal Generator
 
-A hardware development project undertaken as part of the NIDAR competition.
+**An adjustable 0–10V analog output stage, taken from first-principles research through simulation to PCB layout.**
 
-The objective is to develop an adjustable 0–10V analog signal generation system, supported by circuit research, electrical calculations, simulation, and PCB design.
-
----
-
-## 📌 Project Overview
-
-This repository documents the development process of the 0–10V signal generation system, from initial research and calculations to circuit simulation and PCB layout.
-
-The project currently includes:
-
-- Technical research and documentation
-- System block diagram
-- Electrical calculations
-- LTspice circuit simulation
-- KiCad PCB layout design
+Developed by the hardware team for the **NIDAR** competition.
 
 ---
 
-## 📂 Project Documentation
+## Overview
 
-The following HTML documents cover the different stages of the project.
+Many industrial controllers, drives and sensors expect a standard 0–10V analog control signal. This project designs a compact, adjustable signal source that produces that range from a digital input, and documents every engineering decision on the way: why the topology was chosen, how the numbers were derived, how the design behaves in simulation, and how it was laid out as a board.
 
-| Task | Description | Documentation |
-|---|---|---|
-| Task 1 | 0–10V Signal Generation – Introduction | [View HTML](Task1_0-10V_Signal.html) |
-| Task 2 | Circuit Research | [View HTML](Task2_0-10V_Circuit_Research.html) |
-| Task 3 | System Block Diagram | [View HTML](Task3_0-10V_Block_Diagram.html) |
-| Task 4 | Electrical Calculations | [View HTML](Task4_0-10V_Electrical_Calculations.html) |
+The repository is both a design record and a reproducible starting point. Anyone should be able to open the files, follow the reasoning, and rebuild or extend the design.
 
----
+## Design Workflow
 
-## ⚡ LTspice Circuit Simulation
+```
+Research  →  Block Diagram  →  Calculations  →  Simulation  →  PCB Layout  →  Fabrication  →  Validation
+ (done)         (done)           (done)          (done)          (done)        (pending)       (pending)
+```
 
-The circuit has been developed and simulated using **LTspice**.
+## Repository Contents
 
-Available simulation files:
+| Path | Stage | Description |
+| --- | --- | --- |
+| [`Task1_0-10V_Signal.html`](Task1_0-10V_Signal.html) | Introduction | What a 0–10V signal is and why it is used |
+| [`Task2_0-10V_Circuit_Research.html`](Task2_0-10V_Circuit_Research.html) | Research | Survey of candidate circuit approaches and trade-offs |
+| [`Task3_0-10V_Block_Diagram.html`](Task3_0-10V_Block_Diagram.html) | Architecture | System-level block diagram of the signal chain |
+| [`Task4_0-10V_Electrical_Calculations.html`](Task4_0-10V_Electrical_Calculations.html) | Analysis | Component selection and electrical calculations |
+| [`DAC_0-10V.asc`](DAC_0-10V.asc) | Simulation | First LTspice iteration of the circuit |
+| [`DAC_0-10V final simulation.asc`](DAC_0-10V%20final%20simulation.asc) | Simulation | Final, refined LTspice model |
+| [`pcb.kicad_pcb`](pcb.kicad_pcb) | Hardware | KiCad board layout for the final circuit |
 
-- [Final Circuit Simulation](DAC_0-10V%20final%20simulation.asc)
-- [Initial Circuit Simulation](DAC_0-10V.asc)
+## Getting Started
 
-These files can be opened and further analysed using LTspice.
+**Read the documentation**
+Download the repository (or clone it) and open the `Task*.html` files in any web browser. They are best read in order, Task 1 through Task 4.
 
----
+```bash
+git clone https://github.com/alennn2111-spec/NIDAR-HARDWARE-TASKS.git
+cd NIDAR-HARDWARE-TASKS
+```
 
-## 🔧 PCB Design – KiCad
+**Run the simulation**
+1. Install [LTspice](https://www.analog.com/en/resources/design-tools-and-calculators/ltspice-simulator.html).
+2. Open `DAC_0-10V final simulation.asc`.
+3. Run the simulation and probe the output node to inspect the 0–10V behaviour.
 
-The PCB layout has been designed using **KiCad**.
+`DAC_0-10V.asc` is kept for reference so the evolution of the design is visible.
 
-- [PCB Layout File](pcb.kicad_pcb)
+**Inspect the PCB**
+1. Install [KiCad](https://www.kicad.org/).
+2. Open `pcb.kicad_pcb` in the PCB Editor to review the layout, placement and routing.
 
-The PCB design represents the hardware implementation stage of the project.
+## Tools
 
----
-
-## 🛠️ Software and Tools
-
-| Tool | Purpose |
-|---|---|
+| Tool | Used for |
+| --- | --- |
 | LTspice | Circuit simulation and analysis |
-| KiCad | PCB design |
+| KiCad | PCB layout |
 | HTML / CSS | Technical documentation |
 
----
+## Project Status
 
-## 📈 Project Progress
+| Milestone | Status |
+| --- | --- |
+| Initial and circuit research | Complete |
+| System block diagram | Complete |
+| Electrical calculations | Complete |
+| LTspice simulation | Complete |
+| PCB layout | Complete |
+| PCB fabrication | Pending |
+| Hardware assembly | Pending |
+| Physical testing and validation | Pending |
 
-| Development Stage | Status |
-|---|---|
-| Initial research | ✅ Completed |
-| Circuit research | ✅ Completed |
-| Block diagram | ✅ Completed |
-| Electrical calculations | ✅ Completed |
-| LTspice simulation | ✅ Completed |
-| PCB layout design | ✅ Completed |
-| PCB fabrication | 🔄 Pending |
-| Hardware assembly | 🔄 Pending |
-| Physical testing and validation | 🔄 Pending |
+## Roadmap
 
----
+- Fabricate the PCB and assemble the first prototype
+- Measure output accuracy, linearity and noise on the bench
+- Compare measured results against the simulation
+- Feed findings back into a revised layout if needed
 
-## 📁 Repository Structure
+## Contributing
 
-```text
-NIDAR-HARDWARE-TASKS/
-│
-├── README.md
-│
-├── Task1_0-10V_Signal.html
-├── Task2_0-10V_Circuit_Research.html
-├── Task3_0-10V_Block_Diagram.html
-├── Task4_0-10V_Electrical_Calculations.html
-│
-├── DAC_0-10V.asc
-├── DAC_0-10V final simulation.asc
-│
-└── pcb.kicad_pcb
+Suggestions, corrections and design reviews are welcome. Please open an issue describing the change, or submit a pull request with a short explanation of what it improves.
+
+## Author
+
+**alennn2111-spec**, NIDAR hardware team.
